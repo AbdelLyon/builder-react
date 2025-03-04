@@ -1,0 +1,242 @@
+@import url("https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap");
+@import "tinymce/skins/ui/oxide/skin.min.css";
+
+@import "tailwindcss";
+
+:root {
+  --font-family-base: "Lato", sans-serif;
+  /* Colors */
+  --primary-color: #b91c1c;
+  --text-color-dark: #222222;
+  --text-color-medium: #2c2c2c;
+  --text-color-gray: #374151;
+  --bg-white: #ffffff;
+  --bg-gray-light: #ececec;
+  --bg-gray-hover: #f9fafb;
+  --border-gray: #e5e7eb;
+  --border-light: rgba(221, 221, 221, 0.562);
+  --border-field: #e4e4e4;
+  --shadow-color: rgba(53, 53, 53, 0.582);
+  --shadow-button: rgba(0, 0, 0, 0.1);
+  --accent-color: #269ff03d;
+  --color-white: #ffffff;
+
+  /* Spacing */
+  --padding-xs: 5px;
+  --padding-sm: 8px;
+  --padding-md: 10px;
+  --padding-lg: 15px;
+  --padding-xl: 20px;
+  --padding-field-y: 2px;
+  --gap-md: 10px;
+
+  /* Border radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+
+  /* Sizing */
+  --dialog-max-width: 80%;
+  --dialog-height: 660px;
+  --font-size-small: 10px;
+  --font-size-title: 1.2rem;
+
+  /* Transitions */
+  --transition-default: all 0.2s ease;
+
+  /* Font weights */
+  --font-weight-semibold: 600;
+
+  /* Z-index */
+  --z-index-dialog: 1000;
+
+  /* Opacity */
+  --hover-opacity: 0.8;
+}
+
+.gjs-mdl-dialog {
+  max-width: 100% !important;
+  background-color: var(--bg-white) !important;
+  border-radius: var(--radius-lg) !important;
+}
+
+.gjs-mdl-dialog {
+  max-width: var(--dialog-max-width) !important;
+  width: 95% !important;
+  background-color: var(--bg-white) !important;
+  border-radius: var(--radius-xl) !important;
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  box-shadow: 0 10px 30px var(--shadow-color) !important;
+  z-index: var(--z-index-dialog) !important;
+}
+
+.gjs-mdl-title {
+  color: var(--text-color-dark) !important;
+  font-size: var(--font-size-title) !important;
+  font-weight: var(--font-weight-semibold) !important;
+  text-align: center !important;
+}
+
+.gjs-mdl-content {
+  flex-grow: 1 !important;
+  overflow-y: auto !important;
+  padding: var(--padding-xl) !important;
+}
+
+@media screen and (max-width: 1024px) {
+  .gjs-mdl-dialog {
+    width: 90% !important;
+    max-width: 90% !important;
+    margin: 5vh auto !important;
+    max-height: 90vh !important;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .gjs-mdl-dialog {
+    width: 95% !important;
+    max-width: 95% !important;
+    margin: 2vh auto !important;
+    border-radius: var(--radius-lg) !important;
+    max-height: 95vh !important;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .gjs-mdl-dialog {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  .gjs-mdl-content {
+    padding: var(--padding-md) !important;
+  }
+}
+
+/* Assurer la réactivité du contenu */
+.gjs-mdl-content > div {
+  max-width: 100% !important;
+  overflow-x: auto !important;
+}
+
+.tox.tox-tinymce {
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+.tox-insert-table-picker__selected {
+  background-color: var(--primary-color) !important;
+}
+
+.gjs-mdl-content {
+  padding: 0 !important;
+}
+
+.tinymce-modal-buttons {
+  display: flex !important;
+  gap: var(--gap-md) !important;
+  justify-content: end !important;
+  padding: var(--padding-md) !important;
+  margin-top: var(--padding-md) !important;
+}
+
+.gjs-btn-prim {
+  background-color: var(--primary-color) !important;
+  padding: var(--padding-sm) var(--padding-lg) !important;
+  color: var(--color-white) !important;
+  border: none !important;
+  border-radius: var(--radius-md) !important;
+  font-weight: var(--font-weight-semibold) !important;
+  cursor: pointer !important;
+  transition: var(--transition-default) !important;
+}
+
+.gjs-btn-prim:hover {
+  opacity: var(--hover-opacity) !important;
+  background-color: var(--primary-color) !important;
+  box-shadow: 0 4px 6px var(--shadow-button) !important;
+}
+
+.gjs-btn-cancel {
+  background-color: var(--bg-gray-light) !important;
+  color: var(--text-color-gray) !important;
+  border: 1px solid var(--border-gray) !important;
+  padding: var(--padding-sm) var(--padding-lg) !important;
+  border-radius: var(--radius-md) !important;
+  cursor: pointer !important;
+  font-weight: var(--font-weight-semibold) !important;
+  transition: var(--transition-default) !important;
+}
+
+.gjs-btn-cancel:hover {
+  opacity: var(--hover-opacity) !important;
+  background-color: var(--bg-gray-hover) !important;
+}
+
+.tox-edit-area::before {
+  border: 1px solid var(--accent-color) !important;
+  border-radius: var(--radius-sm) !important;
+  margin-top: var(--padding-xl) !important;
+}
+
+.tox-editor-container .tox-editor-header {
+  border: 1px solid var(--border-light);
+  background-color: var(--primary-color);
+  border-radius: var(--radius-sm);
+}
+
+.tox-button {
+  background-color: var(--primary-color) !important;
+  color: var(--color-white) !important;
+  border: none !important;
+  border-radius: var(--radius-md) !important;
+  cursor: pointer !important;
+  transition: var(--transition-default) !important;
+}
+
+[data-mce-name="Cancel"],
+[data-mce-name="close"] {
+  background-color: var(--bg-gray-light) !important;
+  color: var(--text-color-medium) !important;
+}
+
+.gjs-mdl-btn-close {
+  color: var(--text-color-medium) !important;
+}
+
+.tox-button:hover {
+  opacity: var(--hover-opacity) !important;
+}
+
+.gjs-mdl-content {
+  padding: var(--padding-xl) !important;
+  color: var(--text-color-medium) !important;
+}
+
+.gjs-field {
+  background-color: var(--bg-white) !important;
+  border: 1px solid var(--border-field) !important;
+  padding: var(--padding-field-y) var(--padding-xs) !important;
+  border-radius: var(--radius-sm) !important;
+}
+
+.gjs-am-assets-cont {
+  background-color: var(--bg-white) !important;
+}
+
+body {
+  font-family: var(--font-family-base) !important;
+  margin: 0;
+}
