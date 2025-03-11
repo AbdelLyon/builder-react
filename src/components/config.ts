@@ -92,6 +92,17 @@ export const tinyConfig: RawEditorOptions = {
  */
 export const grapesConfig: EditorConfig = {
   height: "100vh",
+  canvas: {
+    // Ajoutez les scripts et styles qui seront injectés dans l'iframe
+    scripts: [
+      // Ajoutez le script Tailwind ici
+      { src: "https://cdn.tailwindcss.com" },
+    ],
+    styles: [
+      // Vous pouvez également ajouter une feuille de style personnalisée si nécessaire
+      "https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css",
+    ],
+  },
   undoManager: { trackSelection: true },
   selectorManager: { componentFirst: true },
   storageManager: {
@@ -104,7 +115,7 @@ export const grapesConfig: EditorConfig = {
     pages: [
       {
         name: "Home page",
-        component: `<h1>GrapesJS React Custom UI</h1>`,
+        component: `<h1 class="text-red-400">GrapesJS React Custom UI</h1>`,
       },
     ],
   },

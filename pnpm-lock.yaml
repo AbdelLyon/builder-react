@@ -53,9 +53,6 @@ importers:
       react-dom:
         specifier: 18.2.0
         version: 18.2.0(react@18.2.0)
-      silver:
-        specifier: link:tinymce/themes/silver
-        version: link:tinymce/themes/silver
       tailwindcss:
         specifier: ^4.0.9
         version: 4.0.9

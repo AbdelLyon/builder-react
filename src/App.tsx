@@ -7,6 +7,9 @@ import GjsEditor, { Canvas } from "@grapesjs/react";
 import blockPlugin from "grapesjs-blocks-basic";
 // import formPlugin from "grapesjs-plugin-forms";
 import Topbar from "./components/Topbar";
+import contactBlockPlugin from "./contactBlockPlugin";
+import galleryBlockPlugin from "./galleryBlockPlugin";
+import carouselBlockPlugin from "./carouselBlockPlugin";
 
 const LoadingComponent = (): JSX.Element => (
   <div className="flex items-center justify-center h-screen">
@@ -28,7 +31,13 @@ export default function App(): JSX.Element {
       grapesjs="https://unpkg.com/grapesjs"
       grapesjsCss="https://unpkg.com/grapesjs/dist/css/grapes.min.css"
       options={grapesConfig}
-      plugins={[blockPlugin]}
+      plugins={[
+        blockPlugin,
+        contactBlockPlugin,
+        galleryBlockPlugin,
+        carouselBlockPlugin,
+        // pluginTailwind,
+      ]}
       onEditor={onEditor}
       onReady={onReady}
       onUpdate={onUpdate}
