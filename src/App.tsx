@@ -43,7 +43,7 @@ export default function App(): JSX.Element {
       onUpdate={onUpdate}
       waitReady={<LoadingComponent />}
     >
-      <Topbar />
+      <Topbar onSave={() => {}} />
       <div className={`flex h-full border-t ${MAIN_BORDER_COLOR}`}>
         <RightSidebar
           className={`gjs-column-l w-[300px] border-r ${MAIN_BORDER_COLOR}`}

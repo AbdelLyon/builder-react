@@ -1,34 +1,34 @@
 import type { Plugin } from "grapesjs";
 
 export type ContactBlockPluginOptions = {
-   /**
-    * Category for the blocks
-    * @default 'Basic'
-    */
-   category?: string;
+  /**
+   * Category for the blocks
+   * @default 'Basic'
+   */
+  category?: string;
 
-   /**
-    * Label for contact block
-    * @default 'Contact Block'
-    */
-   labelContactBlock?: string;
+  /**
+   * Label for contact block
+   * @default 'Contact Block'
+   */
+  labelContactBlock?: string;
 };
 
 const contactBlockPlugin: Plugin<ContactBlockPluginOptions> = (
-   editor,
-   opts = {},
+  editor,
+  opts = {},
 ) => {
-   const options = {
-      category: "Basic",
-      labelContactBlock: "Contact Block",
-      ...opts,
-   };
+  const options = {
+    category: "Basic",
+    labelContactBlock: "Contact Block",
+    ...opts,
+  };
 
-   // Add block
-   editor.BlockManager.add("contact-block", {
-      label: options.labelContactBlock,
-      category: options.category,
-      content: `
+  // Add block
+  editor.BlockManager.add("contact-block", {
+    label: options.labelContactBlock,
+    category: options.category,
+    content: `
       <div class="contact-block">
         <div class="block-header">Bloc contact</div>
         <div class="avatar-container">
@@ -129,75 +129,74 @@ const contactBlockPlugin: Plugin<ContactBlockPluginOptions> = (
         </style>
       </div>
     `,
-      media: `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    media: `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M20 4H4C2.9 4 2 4.9 2 6V18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.9 21.1 4 20 4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       <path d="M8 11C9.10457 11 10 10.1046 10 9C10 7.89543 9.10457 7 8 7C6.89543 7 6 7.89543 6 9C6 10.1046 6.89543 11 8 11Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       <path d="M16 15C16 13.9391 15.5786 12.9217 14.8284 12.1716C14.0783 11.4214 13.0609 11 12 11H4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       <path d="M17 8H17.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>`,
-   });
+  });
 
-   // Add component type
-   editor.DomComponents.addType("contact-block", {
-      isComponent: (el) => el.classList && el.classList.contains("contact-block"),
-      model: {
-         defaults: {
-            name: "Contact Block",
-            droppable: false,
-            traits: [
-               {
-                  type: "text",
-                  name: "name",
-                  label: "Name",
-               },
-               {
-                  type: "text",
-                  name: "position",
-                  label: "Position",
-               },
-               {
-                  type: "text",
-                  name: "phone",
-                  label: "Phone",
-               },
-               {
-                  type: "text",
-                  name: "email",
-                  label: "Email",
-               },
-               {
-                  type: "checkbox",
-                  name: "preview",
-                  label: "Preview Mode",
-               },
-            ],
-         },
+  // Add component type
+  editor.DomComponents.addType("contact-block", {
+    isComponent: (el) => el.classList && el.classList.contains("contact-block"),
+    model: {
+      defaults: {
+        name: "Contact Block",
+        droppable: false,
+        traits: [
+          {
+            type: "text",
+            name: "name",
+            label: "Name",
+          },
+          {
+            type: "text",
+            name: "position",
+            label: "Position",
+          },
+          {
+            type: "text",
+            name: "phone",
+            label: "Phone",
+          },
+          {
+            type: "text",
+            name: "email",
+            label: "Email",
+          },
+          {
+            type: "checkbox",
+            name: "preview",
+            label: "Preview Mode",
+          },
+        ],
+      },
 
-         init() {
-            this.on("change:traits", this.onTraitsChange);
-            this.on("change:attributes:preview", this.togglePreviewMode);
-         },
+      init() {
+        this.on("change:traits", this.onTraitsChange);
+        this.on("change:attributes:preview", this.togglePreviewMode);
+      },
 
-         onTraitsChange() {
-            // Update the view if in preview mode
-            if (this.get("attributes")?.preview) {
-               this.togglePreviewMode();
-            }
-         },
+      onTraitsChange() {
+        // Update the view if in preview mode
+        if (this.get("attributes")?.preview) {
+          this.togglePreviewMode();
+        }
+      },
 
-         togglePreviewMode() {
-            const isPreview = this.get("attributes")?.preview;
-            console.log("isPreview", isPreview);
-            const name = this.getTrait("name")?.get("value") || "";
-            const position = this.getTrait("position")?.get("value") || "";
-            const phone = this.getTrait("phone")?.get("value") || "";
-            const email = this.getTrait("email")?.get("value") || "";
+      togglePreviewMode() {
+        const isPreview = this.get("attributes")?.preview;
+        const name = this.getTrait("name")?.get("value") || "";
+        const position = this.getTrait("position")?.get("value") || "";
+        const phone = this.getTrait("phone")?.get("value") || "";
+        const email = this.getTrait("email")?.get("value") || "";
 
-            if (isPreview) {
-               // Switch to preview mode
-               this.set(
-                  "content",
-                  `
+        if (isPreview) {
+          // Switch to preview mode
+          this.set(
+            "content",
+            `
             <div class="block-header">Bloc contact</div>
             <div class="contact-info">
               <div class="avatar">
@@ -287,12 +286,12 @@ const contactBlockPlugin: Plugin<ContactBlockPluginOptions> = (
               }
             </style>
           `,
-               );
-            } else {
-               // Switch to edit mode
-               this.set(
-                  "content",
-                  `
+          );
+        } else {
+          // Switch to edit mode
+          this.set(
+            "content",
+            `
             <div class="block-header">Bloc contact</div>
             <div class="avatar-container">
               <div class="avatar-placeholder">
@@ -390,78 +389,78 @@ const contactBlockPlugin: Plugin<ContactBlockPluginOptions> = (
               }
             </style>
           `,
-               );
-            }
-         },
+          );
+        }
+      },
+    },
+
+    view: {
+      events() {
+        return {
+          "change input": "handleInputChange",
+        };
       },
 
-      view: {
-         events() {
-            return {
-               "change input": "handleInputChange",
-            };
-         },
+      handleInputChange(e: InputEvent) {
+        const input = e.target as HTMLInputElement;
+        const name = input.getAttribute("name");
+        if (!name) return;
 
-         handleInputChange(e: InputEvent) {
-            const input = e.target as HTMLInputElement;
-            const name = input.getAttribute("name");
-            if (!name) return;
-
-            // Update corresponding trait
-            const trait = this.model.getTrait(name);
-            if (trait) {
-               trait.set("value", input.value);
-            }
-         },
-
-         init() {
-            // Add custom toolbar button for toggling preview mode
-            const model = this.model;
-            const toolbar = model.get("toolbar") || [];
-
-            // Add toggle button to toolbar
-            toolbar.push({
-               command: "contact-block:toggle-preview",
-               label: "Toggle Preview",
-               attributes: { title: "Toggle Preview Mode" },
-            });
-
-            model.set("toolbar", toolbar);
-         },
+        // Update corresponding trait
+        const trait = this.model.getTrait(name);
+        if (trait) {
+          trait.set("value", input.value);
+        }
       },
-   });
 
-   // Add command to toggle preview mode
-   editor.Commands.add("contact-block:toggle-preview", {
-      run(editor) {
-         const selectedComponent = editor.getSelected();
-         if (!selectedComponent) return;
+      init() {
+        // Add custom toolbar button for toggling preview mode
+        const model = this.model;
+        const toolbar = model.get("toolbar") || [];
 
-         const isPreview = selectedComponent.get("attributes")?.preview;
-         selectedComponent.set("attributes", {
-            ...selectedComponent.get("attributes"),
-            preview: !isPreview,
-         });
+        // Add toggle button to toolbar
+        toolbar.push({
+          command: "contact-block:toggle-preview",
+          label: "Toggle Preview",
+          attributes: { title: "Toggle Preview Mode" },
+        });
+
+        model.set("toolbar", toolbar);
       },
-   });
+    },
+  });
 
-   // Listen for input changes to update traits
-   editor.on("component:update", (component) => {
-      if (component.get("tagName") === "INPUT") {
-         const parent = component.parent();
-         const grandparent = parent && parent.parent();
+  // Add command to toggle preview mode
+  editor.Commands.add("contact-block:toggle-preview", {
+    run(editor) {
+      const selectedComponent = editor.getSelected();
+      if (!selectedComponent) return;
 
-         if (grandparent && grandparent.is("contact-block")) {
-            const name = component.get("attributes").name;
-            if (name) {
-               const trait = grandparent.getTrait(name);
-               if (trait) {
-                  trait.set("value", component.get("attributes").value);
-               }
-            }
-         }
+      const isPreview = selectedComponent.get("attributes")?.preview;
+      selectedComponent.set("attributes", {
+        ...selectedComponent.get("attributes"),
+        preview: !isPreview,
+      });
+    },
+  });
+
+  // Listen for input changes to update traits
+  editor.on("component:update", (component) => {
+    if (component.get("tagName") === "INPUT") {
+      const parent = component.parent();
+      const grandparent = parent && parent.parent();
+
+      if (grandparent && grandparent.is("contact-block")) {
+        const name = component.get("attributes").name;
+        if (name) {
+          const trait = grandparent.getTrait(name);
+          if (trait) {
+            trait.set("value", component.get("attributes").value);
+          }
+        }
       }
-   });
+    }
+  });
 };
 
 export default contactBlockPlugin;

@@ -23,7 +23,7 @@ export const useGrapesditor = (
   const onEditor = useCallback(
     (editor: Editor) => {
       console.log("Editor loaded");
-      (window as Window & typeof globalThis & { editor: Editor }).editor =
+      (window as Window & typeof globalThis & { editor: Editor; }).editor =
         editor;
 
       // Configuration du type de composant texte

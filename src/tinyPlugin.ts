@@ -11,6 +11,7 @@ const AI_CONFIG = {
   apiKey: "AIzaSyBq0Fncy7OF3ktGBMhPla-tkk-XkOX_kcE",
 };
 
+
 class TinyMCECustomRTESingleton {
   private static instance: TinyMCECustomRTESingleton;
   private editor: GrapesEditor;
@@ -18,6 +19,7 @@ class TinyMCECustomRTESingleton {
   private currentElement: HTMLElementWithTinyMCE | null = null;
   private modalContainer: HTMLDivElement | null = null;
   private genAI: GoogleGenerativeAI;
+  private currentUpdatedContent: string = '';
 
   private constructor (editor: GrapesEditor, options: RawEditorOptions = {}) {
     this.editor = editor;
@@ -102,12 +104,13 @@ class TinyMCECustomRTESingleton {
           editor.setContent(el.innerHTML);
           editor.focus();
         });
-
         editor.on("change", () => {
           if (contentContainer) {
             const content = editor.getContent();
-            el.innerHTML = content;
+
             contentContainer.innerHTML = content;
+
+            this.currentUpdatedContent = content;
           }
         });
       },
@@ -157,9 +160,18 @@ class TinyMCECustomRTESingleton {
   private saveChanges(): void {
     if (this.currentElement && tinymce.activeEditor) {
       const content = tinymce.activeEditor.getContent();
+
       this.currentElement.innerHTML = content;
+
+      const selectedComponent = this.editor.getSelected();
+      if (selectedComponent) {
+        selectedComponent.set('content', content, { silent: false });
+        selectedComponent.trigger('change:content');
+      }
+
       this.editor.Modal.close();
       tinymce.activeEditor.remove();
+      this.editor.Canvas.refresh();
     }
   }
 

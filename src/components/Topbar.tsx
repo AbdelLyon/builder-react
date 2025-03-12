@@ -4,10 +4,13 @@ import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import { cx } from "./common";
 import TopbarButtons from "./TopbarButtons";
+import { ProjectData } from "grapesjs";
+type TopbarProps = {
+  onSave: (projectData: ProjectData) => void;
+  className?: string;
+};
 
-export default function Topbar({
-  className,
-}: React.HTMLAttributes<HTMLDivElement>) {
+export default function Topbar({ className, onSave }: TopbarProps) {
   return (
     <div className={cx("gjs-top-sidebar flex items-center p-1", className)}>
       <DevicesProvider>
@@ -24,6 +27,12 @@ export default function Topbar({
         )}
       </DevicesProvider>
       <WithEditor>
+        <button
+          className="bg-red-700 text-white px-3 py-1 rounded-md ml-2"
+          onClick={onSave}
+        >
+          Save
+        </button>
         <TopbarButtons className="ml-auto px-2" />
       </WithEditor>
     </div>
