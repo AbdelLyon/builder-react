@@ -20,6 +20,9 @@ importers:
       '@emotion/styled':
         specifier: ^11.3.0
         version: 11.14.0(@emotion/react@11.14.0(@types/react@18.2.14)(react@18.2.0))(@types/react@18.2.14)(react@18.2.0)
+      '@google/generative-ai':
+        specifier: ^0.24.0
+        version: 0.24.0
       '@grapesjs/react':
         specifier: ^0.1.0
         version: 0.1.0
@@ -35,6 +38,9 @@ importers:
       '@tailwindcss/vite':
         specifier: ^4.0.9
         version: 4.0.9(vite@6.2.0(@types/node@22.13.8)(jiti@2.4.2)(lightningcss@1.29.1))
+      '@tanstack/react-query':
+        specifier: ^5.67.3
+        version: 5.67.3(react@18.2.0)
       '@tinymce/tinymce-react':
         specifier: ^6.0.0
         version: 6.0.0(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(tinymce@7.7.0)
@@ -672,6 +678,10 @@ packages:
     resolution: {integrity: sha512-JubJ5B2pJ4k4yGxaNLdbjrnk9d/iDz6/q8wOilpIowd6PJPgaxCuHBnBszq7Ce2TyMrywm5r4PnKm6V3iiZF+g==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
+  '@google/generative-ai@0.24.0':
+    resolution: {integrity: sha512-fnEITCGEB7NdX0BhoYZ/cq/7WPZ1QS5IzJJfC3Tg/OwkvBetMiVJciyaan297OvE4B9Jg1xvo0zIazX/9sGu1Q==}
+    engines: {node: '>=18.0.0'}
+
   '@grapesjs/react@0.1.0':
     resolution: {integrity: sha512-djY+ntxVM06y+D6ZRL0zgMSadVOUElyExPuwsW85JoOgK21Ux+Ysk7F1x4PwrnYIxTqBfTiU1cI+KpnzjYF8+A==}
 
@@ -986,6 +996,14 @@ packages:
     resolution: {integrity: sha512-BIKJO+hwdIsN7V6I7SziMZIVHWWMsV/uCQKYEbeiGRDRld+TkqyRRl9+dQ0MCXbhcVr+D9T/qX2E84kT7V281g==}
     peerDependencies:
       vite: ^5.2.0 || ^6
+
+  '@tanstack/query-core@5.67.3':
+    resolution: {integrity: sha512-pq76ObpjcaspAW4OmCbpXLF6BCZP2Zr/J5ztnyizXhSlNe7fIUp0QKZsd0JMkw9aDa+vxDX/OY7N+hjNY/dCGg==}
+
+  '@tanstack/react-query@5.67.3':
+    resolution: {integrity: sha512-u/n2HsQeH1vpZIOzB/w2lqKlXUDUKo6BxTdGXSMvNzIq5MHYFckRMVuFABp+QB7RN8LFXWV6X1/oSkuDq+MPIA==}
+    peerDependencies:
+      react: ^18 || ^19
 
   '@tinymce/tinymce-react@6.0.0':
     resolution: {integrity: sha512-v5q6x3/kgg3rfQjFYrAm8ZVCnPbUgOuB3yUvSskp75VwR/EUQimONG4S16KL85kFbstiiat6AUDDLMXN4hRxhQ==}
@@ -2908,6 +2926,8 @@ snapshots:
       '@eslint/core': 0.12.0
       levn: 0.4.1
 
+  '@google/generative-ai@0.24.0': {}
+
   '@grapesjs/react@0.1.0': {}
 
   '@humanfs/core@0.19.1': {}
@@ -3154,6 +3174,13 @@ snapshots:
       lightningcss: 1.29.1
       tailwindcss: 4.0.9
       vite: 6.2.0(@types/node@22.13.8)(jiti@2.4.2)(lightningcss@1.29.1)
+
+  '@tanstack/query-core@5.67.3': {}
+
+  '@tanstack/react-query@5.67.3(react@18.2.0)':
+    dependencies:
+      '@tanstack/query-core': 5.67.3
+      react: 18.2.0
 
   '@tinymce/tinymce-react@6.0.0(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(tinymce@7.7.0)':
     dependencies:

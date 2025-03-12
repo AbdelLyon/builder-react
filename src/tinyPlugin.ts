@@ -1,27 +1,27 @@
 import { Editor as GrapesEditor } from "grapesjs";
 import tinymce, { Editor as TinyEditor, RawEditorOptions } from "tinymce";
-
-// Types et interfaces
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 interface HTMLElementWithTinyMCE extends HTMLElement {
   __originalContent?: string;
 }
 
-/**
- * Classe singleton pour gérer TinyMCE comme RTE personnalisé dans GrapesJS
- */
+const AI_CONFIG = {
+  model: "gemini-2.0-flash-001",
+  apiKey: "AIzaSyBq0Fncy7OF3ktGBMhPla-tkk-XkOX_kcE",
+};
+
 class TinyMCECustomRTESingleton {
   private static instance: TinyMCECustomRTESingleton;
   private editor: GrapesEditor;
   private options: RawEditorOptions;
   private currentElement: HTMLElementWithTinyMCE | null = null;
   private modalContainer: HTMLDivElement | null = null;
+  private genAI: GoogleGenerativeAI;
 
-  /**
-   * Constructeur privé pour le pattern singleton
-   */
-  private constructor(editor: GrapesEditor, options: RawEditorOptions = {}) {
+  private constructor (editor: GrapesEditor, options: RawEditorOptions = {}) {
     this.editor = editor;
+    this.genAI = new GoogleGenerativeAI(AI_CONFIG.apiKey);
     this.options = {
       tinyConfig: {
         ...options.tinyConfig,
@@ -31,9 +31,6 @@ class TinyMCECustomRTESingleton {
     this.createModalContainer();
   }
 
-  /**
-   * Obtient ou crée l'instance unique de TinyMCECustomRTESingleton
-   */
   public static getInstance(
     editor: GrapesEditor,
     options?: RawEditorOptions,
@@ -47,48 +44,38 @@ class TinyMCECustomRTESingleton {
     return TinyMCECustomRTESingleton.instance;
   }
 
-  /**
-   * Crée le conteneur modal pour l'éditeur TinyMCE
-   */
   private createModalContainer(): void {
     this.modalContainer = document.createElement("div");
     this.modalContainer.innerHTML = `
-        <div id="tinymce-content" style="color: black; "></div>
-        <div class="tinymce-modal-buttons">
+      <div id="tinymce-content" style="color: black;"></div>
+      <div class="tinymce-modal-buttons">
+        <button class="gjs-btn-ai text-sm" id="tinymce-ai">Générer avec IA</button>
         <button class="gjs-btn-cancel text-sm" id="tinymce-cancel">Annuler</button>
-          <button class="gjs-btn-prim text-sm" id="tinymce-save">Enregistrer</button>
-        </div>
+        <button class="gjs-btn-prim text-sm" id="tinymce-save">Enregistrer</button>
+      </div>
     `;
     document.body.appendChild(this.modalContainer);
   }
 
-  /**
-   * Active l'éditeur TinyMCE sur l'élément spécifié
-   */
   public enable(el: HTMLElementWithTinyMCE): HTMLElement {
     this.currentElement = el;
-
-    // Stocker le contenu courant comme contenu original
     el.__originalContent = el.innerHTML;
 
     const contentContainer =
       this.modalContainer?.querySelector("#tinymce-content");
 
     if (contentContainer) {
-      // Toujours utiliser le contenu le plus récent de l'élément
       contentContainer.innerHTML = el.innerHTML;
     }
 
     this.openEditorModal();
     this.initTiny(el, contentContainer as HTMLElement);
     this.setupModalButtons();
+    this.setupAIButton();
 
     return el;
   }
 
-  /**
-   * Ouvre la modal d'édition
-   */
   private openEditorModal(): void {
     this.editor.Modal.open({
       title: "Éditer le contenu",
@@ -99,35 +86,26 @@ class TinyMCECustomRTESingleton {
     });
   }
 
-  /**
-   * Initialise l'éditeur TinyMCE
-   */
-
   private initTiny(
     el: HTMLElementWithTinyMCE,
     contentContainer: HTMLElement,
   ): void {
-    // Nettoyer l'instance précédente si elle existe
     if (tinymce.activeEditor) {
       tinymce.activeEditor.remove();
     }
 
-    // Configuration de TinyMCE
     const tinyConfig = {
       ...this.options.tinyConfig,
       target: contentContainer,
       setup: (editor: TinyEditor) => {
         editor.on("init", () => {
-          // Utiliser le contenu actuel de l'élément
           editor.setContent(el.innerHTML);
           editor.focus();
         });
 
-        // Un seul événement change ici - supprimez celui dans setupModalButtons
         editor.on("change", () => {
           if (contentContainer) {
             const content = editor.getContent();
-            // Mettre à jour à la fois l'élément et le conteneur
             el.innerHTML = content;
             contentContainer.innerHTML = content;
           }
@@ -138,77 +116,79 @@ class TinyMCECustomRTESingleton {
     tinymce.init(tinyConfig);
   }
 
-  /**
-   * Enregistre les modifications et ferme l'éditeur
-   */
+  private setupAIButton(): void {
+    const aiButton = this.modalContainer?.querySelector("#tinymce-ai");
+
+    aiButton?.addEventListener("click", async () => {
+      const description = prompt("Que voulez-vous générer ? (ex: 'liste de 5 compétences en développement', 'tableau comparatif', 'paragraphe sur...', 'titre et sous-titre')");
+
+      if (description) {
+        try {
+          const model = this.genAI.getGenerativeModel({ model: AI_CONFIG.model });
+          const prompt = `
+          Génère le contenu suivant : ${description}
+          
+          Règles :
+          - Structure HTML propre et sémantique
+          - Utiliser les balises appropriées (<ul>, <ol>, <table>, <h1>, etc.)
+          - Contenu professionnel et précis
+          - Maximum 300 mots
+          - Répondre UNIQUEMENT avec du HTML et css valide
+        `;
+
+          const result = await model.generateContent(prompt);
+          const generatedHTML = result.response.text();
+
+          if (tinymce.activeEditor) {
+            tinymce.activeEditor.setContent(generatedHTML);
+          }
+
+          const contentContainer = this.modalContainer?.querySelector("#tinymce-content");
+          if (contentContainer) {
+            contentContainer.innerHTML = generatedHTML;
+          }
+        } catch (error) {
+          console.error("Erreur de génération IA :", error);
+          alert("Une erreur est survenue lors de la génération du contenu.");
+        }
+      }
+    });
+  }
   private saveChanges(): void {
     if (this.currentElement && tinymce.activeEditor) {
       const content = tinymce.activeEditor.getContent();
-
       this.currentElement.innerHTML = content;
-
       this.editor.Modal.close();
-
       tinymce.activeEditor.remove();
     }
   }
 
-  /**
-   * Annule les modifications et ferme l'éditeur
-   */
   private cancelChanges(): void {
     if (this.currentElement) {
       this.currentElement.innerHTML =
         this.currentElement.__originalContent || "";
-
       this.editor.Modal.close();
-
       if (tinymce.activeEditor) {
         tinymce.activeEditor.remove();
       }
     }
   }
 
-  /**
-   * Configure les boutons de la modal et leurs événements
-   */
-
   private setupModalButtons(): void {
     const saveButton = this.modalContainer?.querySelector("#tinymce-save");
     const cancelButton = this.modalContainer?.querySelector("#tinymce-cancel");
 
-    if (saveButton) {
-      // Supprimez tous les écouteurs existants pour éviter les doublons
-      const newSaveButton = saveButton.cloneNode(true);
-      saveButton.parentNode?.replaceChild(newSaveButton, saveButton);
-      newSaveButton.addEventListener("click", () => this.saveChanges());
-    }
-
-    if (cancelButton) {
-      // Supprimez tous les écouteurs existants pour éviter les doublons
-      const newCancelButton = cancelButton.cloneNode(true);
-      cancelButton.parentNode?.replaceChild(newCancelButton, cancelButton);
-      newCancelButton.addEventListener("click", () => this.cancelChanges());
-    }
-  }
-  /**
-   * Désactive l'éditeur
-   */
-  public disable(): void {
-    // Méthode intentionnellement vide
+    saveButton?.addEventListener("click", () => this.saveChanges());
+    cancelButton?.addEventListener("click", () => this.cancelChanges());
   }
 
-  /**
-   * Récupère le contenu actuel de l'élément
-   */
+  public disable(): void { }
+
   public getContent(): string {
     return this.currentElement?.innerHTML || "";
   }
 }
 
-/**
- * Plugin TinyMCE pour GrapesJS
- */
 const tinyPlugin = (editor: GrapesEditor, opts: RawEditorOptions = {}) => {
   if (!tinymce) {
     console.error("TinyMCE n'est pas disponible.");
