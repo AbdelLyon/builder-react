@@ -50,6 +50,9 @@ importers:
       grapesjs-blocks-basic:
         specifier: ^1.0.2
         version: 1.0.2
+      grapesjs-carousel-component:
+        specifier: ^1.0.1
+        version: 1.0.1
       grapesjs-plugin-forms:
         specifier: ^2.0.6
         version: 2.0.6
@@ -1461,6 +1464,9 @@ packages:
 
   grapesjs-blocks-basic@1.0.2:
     resolution: {integrity: sha512-SsPKf/CvQkZ+kABOsN01auAPHXh/2J20g0AWYF7fHR3Gw3TZLtdIxT1mk90Qzi76u/7sUYi3CTI+i3ZaTtXHRA==}
+
+  grapesjs-carousel-component@1.0.1:
+    resolution: {integrity: sha512-n0wKy4+gc0KjYScgMQQsAMu3X5jknn18VDAe7NOTjVU6w5B6AQMHZeoOu4HpLrjMgc3LrdrOV3RGBckHgZALDA==}
 
   grapesjs-plugin-forms@2.0.6:
     resolution: {integrity: sha512-4rDob01NLiJWas5JW1FCpQc/4R4oS4wc/qr7pQwjGUiDzHNPKZLix10FqUKEv7hnzPmBaR2ejBL87sMwz11Tlw==}
@@ -3756,6 +3762,8 @@ snapshots:
   graceful-fs@4.2.11: {}
 
   grapesjs-blocks-basic@1.0.2: {}
+
+  grapesjs-carousel-component@1.0.1: {}
 
   grapesjs-plugin-forms@2.0.6: {}
 

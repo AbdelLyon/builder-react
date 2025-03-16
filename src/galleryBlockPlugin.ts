@@ -1,329 +1,486 @@
-import type { Plugin } from "grapesjs";
+import type { Plugin, Editor } from "grapesjs";
+import type { AddComponentTypeOptions } from "grapesjs";
 
-export type GalleryBlockPluginOptions = {
-   /**
-    * Category for the blocks
-    * @default 'Basic'
-    */
+export interface GalleryPluginOptions {
    category?: string;
-
-   /**
-    * Label for gallery block
-    * @default 'Gallery'
-    */
    labelGalleryBlock?: string;
+}
+
+interface TraitOption {
+   id: string;
+   name: string;
+   [key: string]: string;
+}
+
+type GalleryItemSize = 'normal' | 'wide' | 'tall' | 'large';
+type MobileLayoutStyle = 'standard' | 'quincunx';
+type GridGap = '8px' | '12px' | '16px' | '24px' | '32px';
+type ColumnCount = '1' | '2' | '3' | '4' | '5' | '6';
+
+// Component type constants
+const COMPONENT_TYPES = {
+   GALLERY: 'gallery',
+   GALLERY_ITEM: 'gallery-item',
+   GALLERY_IMAGE: 'gallery-image',
+   GALLERY_GRID: 'gallery-grid'
+} as const;
+
+const GALLERY_ITEM_SIZES: Record<GalleryItemSize, Partial<CSSStyleDeclaration>> = {
+   normal: {},
+   wide: { gridColumn: 'span 2' },
+   tall: { gridRow: 'span 2' },
+   large: { gridColumn: 'span 2', gridRow: 'span 2' }
 };
 
-const galleryBlockPlugin: Plugin<GalleryBlockPluginOptions> = (
-   editor,
-   opts = {},
+const GRID_GAP_OPTIONS: TraitOption[] = [
+   { id: '8px', name: 'Extra Small' },
+   { id: '12px', name: 'Small' },
+   { id: '16px', name: 'Medium' },
+   { id: '24px', name: 'Large' },
+   { id: '32px', name: 'Extra Large' }
+];
+
+const MOBILE_COLS_OPTIONS: TraitOption[] = [
+   { id: '1', name: '1 Column' },
+   { id: '2', name: '2 Columns' }
+];
+
+const TABLET_COLS_OPTIONS: TraitOption[] = [
+   { id: '2', name: '2 Columns' },
+   { id: '3', name: '3 Columns' }
+];
+
+const DESKTOP_COLS_OPTIONS: TraitOption[] = [
+   { id: '3', name: '3 Columns' },
+   { id: '4', name: '4 Columns' },
+   { id: '5', name: '5 Columns' }
+];
+
+const LARGE_COLS_OPTIONS: TraitOption[] = [
+   { id: '4', name: '4 Columns' },
+   { id: '5', name: '5 Columns' },
+   { id: '6', name: '6 Columns' }
+];
+
+const MOBILE_LAYOUT_OPTIONS: TraitOption[] = [
+   { id: 'standard', name: 'Standard Grid' },
+   { id: 'quincunx', name: 'Quincunx (Staggered)' }
+];
+
+const ITEM_SIZE_OPTIONS: TraitOption[] = [
+   { id: 'normal', name: 'Normal (1x1)' },
+   { id: 'wide', name: 'Wide (2x1)' },
+   { id: 'tall', name: 'Tall (1x2)' },
+   { id: 'large', name: 'Large (2x2)' }
+];
+
+const galleryPlugin: Plugin<GalleryPluginOptions> = (
+   editor: Editor,
+   opts: GalleryPluginOptions = {}
 ) => {
-   const options: GalleryBlockPluginOptions = {
+   const options = {
       category: "Basic",
       labelGalleryBlock: "Gallery",
       ...opts,
    };
+   registerComponents(editor);
+   registerCommands(editor);
+   registerBlocks(editor, options);
+};
 
-   // Add gallery block
-   editor.BlockManager.add("gallery-block", {
-      label: options.labelGalleryBlock as string,
+function registerComponents(editor: Editor): void {
+   const domc = editor.DomComponents;
+   domc.addType(COMPONENT_TYPES.GALLERY_IMAGE, createGalleryImageType());
+   domc.addType(COMPONENT_TYPES.GALLERY_ITEM, createGalleryItemType());
+   domc.addType(COMPONENT_TYPES.GALLERY_GRID, createGalleryGridType());
+   domc.addType(COMPONENT_TYPES.GALLERY, createGalleryType());
+}
+
+function registerCommands(editor: Editor): void {
+   editor.Commands.add("gallery:add-item", {
+      run(editor) {
+         const selected = editor.getSelected();
+         if (!selected) return;
+
+         const grid = selected.find(`.${COMPONENT_TYPES.GALLERY_GRID}`)[0];
+         if (!grid) return;
+
+         const newItem = createDefaultGalleryItem();
+         grid.append(newItem);
+      }
+   });
+
+   editor.Commands.add("gallery-item-change-image", {
+      run(editor) {
+         const selected = editor.getSelected();
+         if (!selected || selected.get("type") !== COMPONENT_TYPES.GALLERY_ITEM) return;
+
+         const image = selected.find(".gallery-image")[0];
+         if (!image) return;
+
+         editor.AssetManager.open({
+            select: (asset) => {
+               image.set("attributes", {
+                  ...image.get("attributes"),
+                  src: asset.get("src")
+               });
+               editor.AssetManager.close();
+            }
+         });
+      }
+   });
+}
+
+function registerBlocks(editor: Editor, options: GalleryPluginOptions): void {
+   const bm = editor.BlockManager;
+
+   bm.add(COMPONENT_TYPES.GALLERY, {
+      label: options.labelGalleryBlock || "Gallery",
       category: options.category,
-      content: `
-      <div class="gallery-container w-full px-4 py-6">
-        <div class="gallery-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
-          <!-- Large image spanning 2 columns and 2 rows -->
-          <div class="gallery-item relative overflow-hidden rounded-md shadow-sm row-span-2 col-span-2">
-            <img src="https://placehold.co/600x600" alt="Gallery image" class="w-full h-full object-cover">
-          </div>
-          
-          <!-- Regular images -->
-          <div class="gallery-item relative overflow-hidden rounded-md shadow-sm">
-            <img src="https://placehold.co/300x300" alt="Gallery image" class="w-full h-full object-cover">
-          </div>
-          
-          <div class="gallery-item relative overflow-hidden rounded-md shadow-sm">
-            <img src="https://placehold.co/300x300" alt="Gallery image" class="w-full h-full object-cover">
-          </div>
-          
-          <!-- Span 2 columns -->
-          <div class="gallery-item relative overflow-hidden rounded-md shadow-sm col-span-2">
-            <img src="https://placehold.co/600x300" alt="Gallery image" class="w-full h-full object-cover">
-          </div>
-          
-          <!-- Regular image -->
-          <div class="gallery-item relative overflow-hidden rounded-md shadow-sm">
-            <img src="https://placehold.co/300x300" alt="Gallery image" class="w-full h-full object-cover">
-          </div>
-          
-          <!-- Span 2 columns -->
-          <div class="gallery-item relative overflow-hidden rounded-md shadow-sm col-span-2">
-            <img src="https://placehold.co/600x300" alt="Gallery image" class="w-full h-full object-cover">
-          </div>
-          
-          <!-- Regular image -->
-          <div class="gallery-item relative overflow-hidden rounded-md shadow-sm">
-            <img src="https://placehold.co/300x300" alt="Gallery image" class="w-full h-full object-cover">
-          </div>
-        </div>
-      </div>
-    `,
       media: `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3ZM5 5H19V11H5V5ZM5 19V13H11V19H5ZM19 19H13V13H19V19Z" fill="currentColor"/>
     </svg>`,
+      content: { type: COMPONENT_TYPES.GALLERY }
    });
+}
 
-   // Type pour un élément du DOM
-   type HTMLElementWithClasses = HTMLElement & { classList: DOMTokenList; };
-
-   // Add component type for gallery container
-   editor.DomComponents.addType("gallery-container", {
-      isComponent: (el: HTMLElementWithClasses): boolean =>
-         Boolean(el.classList && el.classList.contains("gallery-container")),
-      model: {
-         defaults: {
-            name: "Gallery Container",
-            traits: [
-               {
-                  type: "select",
-                  name: "gap",
-                  label: "Grid Gap",
-                  options: [
-                     { id: "gap-1", name: "Extra Small" },
-                     { id: "gap-2", name: "Small" },
-                     { id: "gap-3", name: "Medium" },
-                     { id: "gap-4", name: "Large" },
-                     { id: "gap-6", name: "Extra Large" },
-                  ],
-                  default: "gap-4",
-               },
-               {
-                  type: "select",
-                  name: "mobile",
-                  label: "Mobile Columns",
-                  options: [
-                     { id: "grid-cols-1", name: "1 Column" },
-                     { id: "grid-cols-2", name: "2 Columns" },
-                  ],
-                  default: "grid-cols-1",
-               },
-               {
-                  type: "select",
-                  name: "tablet",
-                  label: "Tablet Columns",
-                  options: [
-                     { id: "sm:grid-cols-2", name: "2 Columns" },
-                     { id: "sm:grid-cols-3", name: "3 Columns" },
-                  ],
-                  default: "sm:grid-cols-2",
-               },
-               {
-                  type: "select",
-                  name: "desktop",
-                  label: "Desktop Columns",
-                  options: [
-                     { id: "md:grid-cols-3", name: "3 Columns" },
-                     { id: "md:grid-cols-4", name: "4 Columns" },
-                     { id: "md:grid-cols-5", name: "5 Columns" },
-                  ],
-                  default: "md:grid-cols-3",
-               },
-               {
-                  type: "select",
-                  name: "large",
-                  label: "Large Screen Columns",
-                  options: [
-                     { id: "lg:grid-cols-4", name: "4 Columns" },
-                     { id: "lg:grid-cols-5", name: "5 Columns" },
-                     { id: "lg:grid-cols-6", name: "6 Columns" },
-                  ],
-                  default: "lg:grid-cols-4",
-               },
-            ],
-         },
-         init(): void {
-            this.on("change:traits", this.updateGridSettings);
-         },
-         updateGridSettings(): void {
-            const grid = this.find(".gallery-grid")[0];
-            if (!grid) return;
-
-            // Get traits values
-            const gap: string =
-               (this.getTrait("gap")?.get("value") as string) || "gap-4";
-            const mobile: string =
-               (this.getTrait("mobile")?.get("value") as string) || "grid-cols-1";
-            const tablet: string =
-               (this.getTrait("tablet")?.get("value") as string) || "sm:grid-cols-2";
-            const desktop: string =
-               (this.getTrait("desktop")?.get("value") as string) ||
-               "md:grid-cols-3";
-            const large: string =
-               (this.getTrait("large")?.get("value") as string) || "lg:grid-cols-4";
-
-            // Get current classes
-            const classes: string[] = grid.getClasses();
-
-            // Filter out classes we're going to replace
-            const filteredClasses: string[] = classes.filter(
-               (cls: string): boolean =>
-                  !cls.startsWith("gap-") &&
-                  !cls.startsWith("grid-cols-") &&
-                  !cls.startsWith("sm:grid-cols-") &&
-                  !cls.startsWith("md:grid-cols-") &&
-                  !cls.startsWith("lg:grid-cols-"),
-            );
-
-            // Set new classes
-            grid.setClass([
-               ...filteredClasses,
-               gap,
-               mobile,
-               tablet,
-               desktop,
-               large,
-            ]);
-         },
+function createGalleryImageType(): AddComponentTypeOptions {
+   return {
+      isComponent: (el) => {
+         if (el.classList && el.classList.contains("gallery-image")) {
+            return { type: COMPONENT_TYPES.GALLERY_IMAGE };
+         }
+         return undefined;
       },
-   });
-
-   // Add component type for gallery item
-   editor.DomComponents.addType("gallery-item", {
-      isComponent: (el: HTMLElementWithClasses): boolean =>
-         Boolean(el.classList && el.classList.contains("gallery-item")),
+      extend: "image",
       model: {
          defaults: {
+            toolbar: [],
+            draggable: false,
+            selectable: true,
+            resizable: false,
+            attributes: {
+               src: "https://placehold.co/400x400",
+               class: "gallery-image",
+               alt: "Gallery image"
+            },
+            style: {
+               "object-fit": "cover",
+               "width": "100%",
+               "height": "100%",
+               "border-radius": "10px"
+            }
+         }
+      }
+   };
+}
+
+function createGalleryItemType(): AddComponentTypeOptions {
+   return {
+      isComponent: (el) => {
+         if (el.classList && el.classList.contains("gallery-item")) {
+            return { type: COMPONENT_TYPES.GALLERY_ITEM };
+         }
+         return undefined;
+      },
+      model: {
+         defaults: {
+            toolbar: [],
             name: "Gallery Item",
-            draggable: false, // Empêche de déplacer l'élément
-            droppable: false, // Empêche de déposer des éléments à l'intérieur
-            selectable: true, // Mais permet de sélectionner pour édition
+            draggable: false,
+            droppable: false,
+            selectable: true,
+            attributes: {
+               class: "gallery-item",
+            },
+            style: {
+               "position": "relative",
+               "overflow": "hidden",
+               "box-shadow": "0 2px 4px rgba(0,0,0,0.1)",
+               "border-radius": "10spx",
+               "min-height": "100px"
+            },
             traits: [
                {
                   type: "select",
                   name: "size",
                   label: "Item Size",
-                  options: [
-                     { id: "normal", name: "Normal (1x1)" },
-                     { id: "wide", name: "Wide (2x1)" },
-                     { id: "tall", name: "Tall (1x2)" },
-                     { id: "large", name: "Large (2x2)" },
-                  ],
-                  default: "normal",
-               },
+                  options: ITEM_SIZE_OPTIONS,
+                  value: "normal",
+               }
+            ],
+            components: [
+               {
+                  type: COMPONENT_TYPES.GALLERY_IMAGE,
+               }
             ],
          },
-         init(): void {
+         init() {
             this.on("change:traits", this.updateItemSize);
          },
-         updateItemSize(): void {
-            // Get the size trait value
-            const size: string =
-               (this.getTrait("size")?.get("value") as string) || "normal";
-
-            // Get current classes
-            const classes: string[] = this.getClasses();
-
-            // Remove span classes
-            const filteredClasses: string[] = classes.filter(
-               (cls: string): boolean =>
-                  !cls.includes("col-span-") && !cls.includes("row-span-"),
-            );
-
-            const newClasses: string[] = [...filteredClasses];
-
-            // Add appropriate classes based on size
-            switch (size) {
-               case "wide":
-                  newClasses.push("col-span-2");
-                  break;
-               case "tall":
-                  newClasses.push("row-span-2");
-                  break;
-               case "large":
-                  newClasses.push("col-span-2", "row-span-2");
-                  break;
-               // Normal size doesn't need additional classes
+         updateItemSize() {
+            const size = this.getTrait("size")?.get("value") as GalleryItemSize || "normal";
+            const currentStyle = { ...this.getStyle() };
+            delete currentStyle["grid-column"];
+            delete currentStyle["grid-row"];
+            const sizeStyles = GALLERY_ITEM_SIZES[size];
+            for (const [property, value] of Object.entries(sizeStyles)) {
+               currentStyle[property] = String(value);
             }
 
-            this.setClass(newClasses);
-         },
-      },
-      view: {
-         events(): { [key: string]: string; } {
-            return {
-               "dblclick img": "handleImageClick",
-            };
-         },
-
-         handleImageClick(e: MouseEvent): void {
-            e.stopPropagation();
-
-            // Get the clicked image
-            const img = e.target as HTMLImageElement;
-            if (!img || !(img instanceof HTMLImageElement)) return;
-
-            // Create a file input dialog
-            const input = document.createElement("input");
-            input.type = "file";
-            input.accept = "image/*";
-
-            // When a file is selected
-            input.onchange = (event: Event): void => {
-               const target = event.target as HTMLInputElement;
-               const file = target.files?.[0];
-               if (!file) return;
-
-               // Read as data URL and update the image
-               const reader = new FileReader();
-               reader.onload = (e: ProgressEvent<FileReader>): void => {
-                  if (e.target && typeof e.target.result === "string") {
-                     img.src = e.target.result;
-                  }
-               };
-               reader.readAsDataURL(file);
-            };
-
-            // Open file dialog
-            input.click();
-         },
-      },
-   });
-
-   // Add command to add new gallery item
-   editor.Commands.add("gallery-add-item", {
-      run(editor): void {
-         const selected = editor.getSelected();
-         if (!selected) return;
-
-         // Find the gallery grid
-         let grid;
-         if (selected.find(".gallery-grid").length > 0) {
-            grid = selected.find(".gallery-grid")[0];
-         } else {
-            return;
+            this.setStyle(currentStyle);
          }
-
-         if (!grid) return;
-
-         // Add a new gallery item
-         grid.append(`
-        <div class="gallery-item relative overflow-hidden rounded-md shadow-sm">
-          <img src="https://placehold.co/300x300" alt="Gallery image" class="w-full h-full object-cover">
-        </div>
-      `);
       },
-   });
 
-   // Add toolbar buttons
-   editor.on("component:selected", (component): void => {
-      if (!component) return;
+   };
+}
 
-      // For gallery container
-      if (component.getClasses().includes("gallery-container")) {
-         component.set("toolbar", [
-            { command: "gallery-add-item", label: "+ Item" },
-         ]);
+function createGalleryGridType(): AddComponentTypeOptions {
+   return {
+      isComponent: (el) => {
+         if (el.classList && el.classList.contains("gallery-grid")) {
+            return { type: COMPONENT_TYPES.GALLERY_GRID };
+         }
+         return undefined;
+      },
+      model: {
+         defaults: {
+            toolbar: [],
+            name: "Gallery Grid",
+            attributes: {
+               class: "gallery-grid",
+            },
+            style: {
+               "display": "grid",
+               "grid-template-columns": "repeat(4, 1fr)",
+               "gap": "16px",
+            }
+         }
       }
-   });
-};
+   };
+}
 
-export default galleryBlockPlugin;
+function createGalleryType(): AddComponentTypeOptions {
+   return {
+      isComponent: (el) => {
+         if (el.classList && el.classList.contains("gallery-container")) {
+            return { type: COMPONENT_TYPES.GALLERY };
+         }
+         return undefined;
+      },
+      model: {
+         defaults: {
+            name: "Gallery",
+            droppable: false,
+            attributes: {
+               class: "gallery-container",
+            },
+            style: {
+               "width": "100%",
+               "padding": "16px 16px"
+            },
+            traits: [
+               {
+                  type: "select",
+                  name: "gap",
+                  label: "Grid Gap",
+                  options: GRID_GAP_OPTIONS,
+                  value: "16px",
+               },
+               {
+                  type: "select",
+                  name: "mobileCols",
+                  label: "Mobile Columns",
+                  options: MOBILE_COLS_OPTIONS,
+                  value: "1",
+               },
+               {
+                  type: "select",
+                  name: "mobileLayout",
+                  label: "Mobile Layout Style",
+                  options: MOBILE_LAYOUT_OPTIONS,
+                  value: "standard",
+               },
+               {
+                  type: "select",
+                  name: "tabletCols",
+                  label: "Tablet Columns",
+                  options: TABLET_COLS_OPTIONS,
+                  value: "2",
+               },
+               {
+                  type: "select",
+                  name: "desktopCols",
+                  label: "Desktop Columns",
+                  options: DESKTOP_COLS_OPTIONS,
+                  value: "3",
+               },
+               {
+                  type: "select",
+                  name: "largeCols",
+                  label: "Large Screen Columns",
+                  options: LARGE_COLS_OPTIONS,
+                  value: "4",
+               }
+            ],
+            components: [
+               {
+                  type: COMPONENT_TYPES.GALLERY_GRID,
+                  components: createDefaultGalleryItems()
+               }
+            ],
+            script: function () {
+
+               const grid = this.querySelector('.gallery-grid') as HTMLElement;
+
+               if (grid) {
+                  const gap = this.getAttribute('data-gap') || '16px';
+                  const mobileCols = parseInt(this.getAttribute('data-mobile-cols') || '1');
+                  const mobileLayout = this.getAttribute('data-mobile-layout') || 'standard';
+                  const tabletCols = parseInt(this.getAttribute('data-tablet-cols') || '2');
+                  const desktopCols = parseInt(this.getAttribute('data-desktop-cols') || '3');
+                  const largeCols = parseInt(this.getAttribute('data-large-cols') || '4');
+
+                  function updateGridLayout() {
+                     let columns;
+                     const isQuincunxActive = mobileLayout === 'quincunx' && mobileCols === 2;
+
+                     const items = grid.querySelectorAll('.gallery-item');
+                     items.forEach(item => {
+                        const element = item as HTMLElement;
+                        element.style.transform = '';
+                     });
+
+                     if (window.innerWidth < 768) {
+                        columns = mobileCols;
+
+                        if (isQuincunxActive) {
+                           items.forEach((item, index) => {
+                              const element = item as HTMLElement;
+                              if (index % 2 === 1) {
+                                 element.style.transform = 'translateY(50%)';
+                              }
+                           });
+                        }
+                     } else if (window.innerWidth < 1024) {
+                        columns = tabletCols;
+                     } else if (window.innerWidth < 1280) {
+                        columns = desktopCols;
+                     } else {
+                        columns = largeCols;
+                     }
+
+                     grid.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
+                     grid.style.gap = gap;
+                  }
+
+                  updateGridLayout();
+
+                  window.addEventListener('resize', updateGridLayout);
+               }
+            }
+         },
+         init() {
+            this.on("change:traits", this.updateGridSettings);
+         },
+         updateGridSettings() {
+            const grid = this.find(`.${COMPONENT_TYPES.GALLERY_GRID}`)[0];
+            if (!grid) return;
+
+            const gap = this.getTrait("gap")?.get("value") as GridGap || "16px";
+            const mobileCols = this.getTrait("mobileCols")?.get("value") as ColumnCount || "1";
+            const mobileLayout = this.getTrait("mobileLayout")?.get("value") as MobileLayoutStyle || "standard";
+            const tabletCols = this.getTrait("tabletCols")?.get("value") as ColumnCount || "2";
+            const desktopCols = this.getTrait("desktopCols")?.get("value") as ColumnCount || "3";
+            const largeCols = this.getTrait("largeCols")?.get("value") as ColumnCount || "4";
+
+            this.set("attributes", {
+               ...this.get("attributes"),
+               "data-gap": gap,
+               "data-mobile-cols": mobileCols,
+               "data-mobile-layout": mobileLayout,
+               "data-tablet-cols": tabletCols,
+               "data-desktop-cols": desktopCols,
+               "data-large-cols": largeCols
+            });
+
+            grid.setStyle({
+               "gap": gap,
+               "grid-template-columns": `repeat(${largeCols}, 1fr)`
+            });
+         }
+      },
+   };
+}
+
+function createDefaultGalleryItems() {
+   return [
+      {
+         type: COMPONENT_TYPES.GALLERY_ITEM,
+         style: {
+            "grid-column": "span 2",
+            "grid-row": "span 2"
+         },
+         traits: [{ type: "select", name: "size", value: "large" }],
+         components: [
+            {
+               type: COMPONENT_TYPES.GALLERY_IMAGE,
+               attributes: {
+                  src: "https://placehold.co/600x600"
+               }
+            }
+         ]
+      },
+      createDefaultGalleryItem("https://placehold.co/300x300"),
+      createDefaultGalleryItem("https://placehold.co/300x300"),
+      {
+         type: COMPONENT_TYPES.GALLERY_ITEM,
+         style: {
+            "grid-column": "span 2"
+         },
+         traits: [{ type: "select", name: "size", value: "wide" }],
+         components: [
+            {
+               type: COMPONENT_TYPES.GALLERY_IMAGE,
+               attributes: {
+                  src: "https://placehold.co/600x300"
+               }
+            }
+         ]
+      },
+      createDefaultGalleryItem("https://placehold.co/300x300"),
+      {
+         type: COMPONENT_TYPES.GALLERY_ITEM,
+         style: {
+            "grid-column": "span 2"
+         },
+         traits: [{ type: "select", name: "size", value: "wide" }],
+         components: [
+            {
+               type: COMPONENT_TYPES.GALLERY_IMAGE,
+               attributes: {
+                  src: "https://placehold.co/600x300"
+               }
+            }
+         ]
+      },
+      // Regular image 4
+      createDefaultGalleryItem("https://placehold.co/300x300")
+   ];
+}
+
+function createDefaultGalleryItem(imageUrl: string = "https://placehold.co/300x300") {
+   return {
+      type: COMPONENT_TYPES.GALLERY_ITEM,
+      components: [
+         {
+            type: COMPONENT_TYPES.GALLERY_IMAGE,
+            attributes: {
+               src: imageUrl
+            }
+         }
+      ]
+   };
+}
+
+export default galleryPlugin;
