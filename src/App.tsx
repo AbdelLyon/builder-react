@@ -7,7 +7,7 @@ import GjsEditor, { Canvas } from "@grapesjs/react";
 import Topbar from "./components/Topbar";
 import contactBlockPlugin from "./contactBlockPlugin";
 import galleryBlockPlugin from "./galleryBlockPlugin";
-import carouselBlockPlugin from "./carouselBlockPlugin";
+import carouselBlockPlugin from "./carouselPlugin";
 import basicPlugin from "./basicPlugin";
 
 const LoadingComponent = (): JSX.Element => (
