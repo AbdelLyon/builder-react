@@ -4,12 +4,11 @@ import { grapesConfig, tinyConfig } from "./components/config";
 import { MAIN_BORDER_COLOR } from "./components/common";
 import { RightSidebar } from "./components/RightSidebar";
 import GjsEditor, { Canvas } from "@grapesjs/react";
-import blockPlugin from "grapesjs-blocks-basic";
-// import formPlugin from "grapesjs-plugin-forms";
 import Topbar from "./components/Topbar";
 import contactBlockPlugin from "./contactBlockPlugin";
 import galleryBlockPlugin from "./galleryBlockPlugin";
 import carouselBlockPlugin from "./carouselBlockPlugin";
+import basicPlugin from "./basicPlugin";
 
 const LoadingComponent = (): JSX.Element => (
   <div className="flex items-center justify-center h-screen">
@@ -32,7 +31,7 @@ export default function App(): JSX.Element {
       grapesjsCss="https://unpkg.com/grapesjs/dist/css/grapes.min.css"
       options={grapesConfig}
       plugins={[
-        blockPlugin,
+        basicPlugin,
         contactBlockPlugin,
         galleryBlockPlugin,
         carouselBlockPlugin,
