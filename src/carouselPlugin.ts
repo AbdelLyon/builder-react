@@ -210,6 +210,9 @@ function createCarouselType(): AddComponentTypeOptions {
             droppable: false,
             attributes: {
                class: "carousel-container",
+               "data-autoplay": "true",
+               "data-interval": "3000",
+               "data-slide-height": "300"
             },
             style: {
                "position": "relative",
@@ -218,26 +221,6 @@ function createCarouselType(): AddComponentTypeOptions {
                "padding": "0 50px",
                "box-sizing": "border-box"
             },
-            traits: [
-               {
-                  type: "checkbox",
-                  name: "autoplay",
-                  label: "Autoplay",
-                  value: true,
-               },
-               {
-                  type: "number",
-                  name: "interval",
-                  label: "Interval (ms)",
-                  value: 3000,
-               },
-               {
-                  type: "number",
-                  name: "slideHeight",
-                  label: "Slide Height (px)",
-                  value: 300,
-               }
-            ],
             components: [
                {
                   attributes: {
@@ -395,29 +378,8 @@ function createCarouselType(): AddComponentTypeOptions {
 
                updateCarousel();
             },
-         },
-         init() {
-            this.on("change:traits", this.updateCarouselTraits);
-         },
-         updateCarouselTraits() {
-            const autoplay = this.getTrait("autoplay")?.get("value");
-            const interval = this.getTrait("interval")?.get("value");
-            const slideHeight = this.getTrait("slideHeight")?.get("value");
-
-            const slides = this.find(".carousel-slide");
-            slides.forEach(slide => {
-               slide.addStyle({ height: `${slideHeight}px` });
-            });
-
-            this.set("attributes", {
-               ...this.get("attributes"),
-               "data-autoplay": autoplay,
-               "data-interval": interval,
-               "data-slide-height": slideHeight
-            });
          }
       },
-
    };
 }
 

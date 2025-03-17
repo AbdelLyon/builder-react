@@ -9,6 +9,8 @@ import contactBlockPlugin from "./contactBlockPlugin";
 import galleryBlockPlugin from "./galleryBlockPlugin";
 import carouselBlockPlugin from "./carouselPlugin";
 import basicPlugin from "./basicPlugin";
+import spacerPlugin from "./spacerPlugin";
+import buttonPlugin from "./buttonPlugin";
 
 const LoadingComponent = (): JSX.Element => (
   <div className="flex items-center justify-center h-screen">
@@ -35,6 +37,8 @@ export default function App(): JSX.Element {
         contactBlockPlugin,
         galleryBlockPlugin,
         carouselBlockPlugin,
+        spacerPlugin,
+        buttonPlugin,
         // pluginTailwind,
       ]}
       onEditor={onEditor}
