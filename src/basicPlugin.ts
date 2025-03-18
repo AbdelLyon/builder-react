@@ -32,6 +32,7 @@ const basicPlugin: Plugin<PluginOptions> = (editor, opts = {}) => {
       ...opts
    };
 
+
    loadBlocks(editor, config);
 };
 

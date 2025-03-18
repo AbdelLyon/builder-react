@@ -11,6 +11,8 @@ import carouselBlockPlugin from "./carouselPlugin";
 import basicPlugin from "./basicPlugin";
 import spacerPlugin from "./spacerPlugin";
 import buttonPlugin from "./buttonPlugin";
+import imagePlugin from "./imagePlugin";
+import mapPlugin from "./mapPlugin";
 
 const LoadingComponent = (): JSX.Element => (
   <div className="flex items-center justify-center h-screen">
@@ -33,13 +35,14 @@ export default function App(): JSX.Element {
       grapesjsCss="https://unpkg.com/grapesjs/dist/css/grapes.min.css"
       options={grapesConfig}
       plugins={[
-        basicPlugin,
-        contactBlockPlugin,
-        galleryBlockPlugin,
-        carouselBlockPlugin,
-        spacerPlugin,
+        // contactBlockPlugin,
+        // galleryBlockPlugin,
+        // carouselBlockPlugin,
+        // spacerPlugin,
         buttonPlugin,
         // pluginTailwind,
+        imagePlugin,
+        mapPlugin,
       ]}
       onEditor={onEditor}
       onReady={onReady}
