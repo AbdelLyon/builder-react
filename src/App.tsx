@@ -13,6 +13,7 @@ import spacerPlugin from "./spacerPlugin";
 import buttonPlugin from "./buttonPlugin";
 import imagePlugin from "./imagePlugin";
 import mapPlugin from "./mapPlugin";
+import videoPlugin from "./videoPlugin";
 
 const LoadingComponent = (): JSX.Element => (
   <div className="flex items-center justify-center h-screen">
@@ -43,6 +44,7 @@ export default function App(): JSX.Element {
         // pluginTailwind,
         imagePlugin,
         mapPlugin,
+        videoPlugin,
       ]}
       onEditor={onEditor}
       onReady={onReady}
