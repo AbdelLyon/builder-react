@@ -50,7 +50,7 @@ const BUTTON_COLORS: Record<string, ButtonColorSet> = {
    },
    "danger": {
       base: "#dc3545",
-      text: "white",
+      text: "#ffff",
       hover: "#bb2d3b"
    },
    "warning": {
@@ -64,7 +64,7 @@ const BUTTON_COLORS: Record<string, ButtonColorSet> = {
       hover: "#31d2f2"
    },
    "light": {
-      base: "#f8f9fa",
+      base: "#ffff",
       text: "#212529",
       hover: "#e9ecef"
    },
@@ -90,9 +90,9 @@ Object.keys(BUTTON_COLORS).forEach(color => {
 // Ajouter les styles outline
 Object.keys(BUTTON_COLORS).forEach(color => {
    BUTTON_STYLES[`outline-${color}`] = {
-      "background-color": "transparent",
-      "border-color": BUTTON_COLORS[color].base,
-      "color": BUTTON_COLORS[color].base
+      "background-color": "#ffff",
+      "border-color": BUTTON_COLORS[color].base === "#ffff" ? "#555555" : BUTTON_COLORS[color].base,
+      "color": BUTTON_COLORS[color].base === "#ffff" ? "#555555" : BUTTON_COLORS[color].base
    };
 });
 
@@ -279,6 +279,12 @@ function registerCommands(editor: Editor, options: Required<ButtonPluginOptions>
               <label class="btn-label">Lien URL (optionnel)</label>
               <div class="btn-input-wrap">
                 <input type="text" class="btn-input button-link-input" value="${currentLink}" placeholder="https://exemple.fr">
+                <div class="btn-input-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                  </svg>
+                </div>
               </div>
             </div>
             
@@ -288,7 +294,7 @@ function registerCommands(editor: Editor, options: Required<ButtonPluginOptions>
                 ${options.sizes.map(size => `
                   <div class="btn-size ${currentSize === size.value ? 'selected' : ''}" data-size="${size.value}">
                     <div class="btn-size-inner">
-                      <div class="btn-size-bar" style="height: ${size.value === 'small' ? '4px' : size.value === 'medium' ? '6px' : '8px'}"></div>
+                      <div class="btn-size-bar" style="height: ${size.value === 'small' ? '20px' : size.value === 'medium' ? '30px' : '40px'}"></div>
                     </div>
                     <div class="btn-size-name">${size.name}</div>
                   </div>
@@ -327,30 +333,36 @@ function registerCommands(editor: Editor, options: Required<ButtonPluginOptions>
          const style = document.createElement('style');
          style.textContent = `
         .btn-settings {
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
           display: flex;
           flex-direction: column;
-          color: #333;
+          color: #1a202c;
+          padding: 0;
+          max-width: 650px;
+          margin: 0 auto;
         }
         
         .btn-preview-wrap {
-          background: #f8f9fa;
-          padding: 20px;
-          border-radius: 8px;
-          margin-bottom: 24px;
+          background: #f7fafc;
+          padding: 24px;
+          border-radius: 12px;
+          margin-bottom: 20px;
           text-align: center;
+          border: 1px solid #e2e8f0;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
         
         .btn-preview-label {
-          font-size: 12px;
+          font-size: 10px;
           text-transform: uppercase;
           letter-spacing: 0.5px;
-          color: #6c757d;
-          margin-bottom: 15px;
+          color: #718096;
+          margin-bottom: 10px;
+          font-weight: 600;
         }
         
         .btn-preview {
-          min-height: 60px;
+          min-height: 50px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -363,10 +375,15 @@ function registerCommands(editor: Editor, options: Required<ButtonPluginOptions>
           background-color: #0d6efd;
           color: white;
           border: 1px solid #0d6efd;
+          cursor: pointer;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+          transition: all 0.2s ease;
+          font-weight: 500;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         
         .btn-content {
-          padding: 0 10px;
+          padding: 0;
         }
         
         .btn-section {
@@ -375,9 +392,11 @@ function registerCommands(editor: Editor, options: Required<ButtonPluginOptions>
         
         .btn-label {
           display: block;
-          font-weight: 500;
+          font-weight: 600;
           margin-bottom: 10px;
-          color: #343a40;
+          color: #2d3748;
+          font-size: 14px;
+          letter-spacing: 0.01em;
         }
         
         .btn-input-wrap {
@@ -386,46 +405,62 @@ function registerCommands(editor: Editor, options: Required<ButtonPluginOptions>
         
         .btn-input {
           width: 100%;
-          padding: 10px 12px;
-          border: 1px solid #dee2e6;
-          border-radius: 6px;
+          padding: 12px 16px;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
           font-size: 14px;
-          transition: border-color 0.2s;
+          transition: all 0.2s ease;
           box-sizing: border-box;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+          background-color: #fff;
+        }
+        
+        .btn-input-icon {
+          position: absolute;
+          right: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #a0aec0;
+        }
+        
+        .button-link-input {
+          padding-right: 40px;
         }
         
         .btn-input:focus {
-          border-color: #4dabf7;
+          border-color: #4299e1;
           outline: none;
-          box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+          box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
         }
         
         .btn-sizes {
-          display: flex;
-          gap: 15px;
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 12px;
         }
         
         .btn-size {
-          flex: 1;
           cursor: pointer;
-          padding: 10px;
-          border-radius: 6px;
-          background: #f8f9fa;
-          transition: all 0.2s;
+          padding: 14px 10px;
+          border-radius: 10px;
+          background: #f7fafc;
+          transition: all 0.2s ease;
           text-align: center;
+          border: 1px solid #e2e8f0;
         }
         
         .btn-size:hover {
-          background: #e9ecef;
+          transform: translateY(-2px);
+          box-shadow: 0 0 0 1px rgba(66, 153, 225, 0.3);
         }
         
         .btn-size.selected {
-          background: rgba(13, 110, 253, 0.1);
-          box-shadow: 0 0 0 2px #4dabf7;
+          background: #ebf8ff;
+          box-shadow: 0 0 0 1px rgba(66, 153, 225, 0.3);
         }
         
         .btn-size-inner {
-          height: 30px;
+          height: 25px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -433,37 +468,53 @@ function registerCommands(editor: Editor, options: Required<ButtonPluginOptions>
         
         .btn-size-bar {
           width: 60%;
-          background: #adb5bd;
+          background: #ffff;
           border-radius: 4px;
+          transition: all 0.2s ease;
+          border: 1px solid #e2e8f0;
         }
         
-        .btn-size-label {
+        .btn-size:hover .btn-size-bar {
+          opacity: 0.8;
+        }
+        
+        .btn-size-name {
           font-size: 13px;
           margin-top: 8px;
+          font-weight: 500;
+          color: #4a5568;
+          transition: color 0.2s ease;
+        }
+        
+        .btn-size.selected .btn-size-name {
+          color: #2b6cb0;
         }
         
         .btn-style-tabs {
           display: flex;
-          border-bottom: 1px solid #dee2e6;
-          margin-bottom: 15px;
+          border-bottom: 1px solid #e2e8f0;
+          margin-bottom: 20px;
+          gap: 8px;
         }
         
         .btn-style-tab {
           padding: 8px 16px;
           cursor: pointer;
           font-size: 14px;
-          transition: all 0.2s;
+          transition: all 0.2s ease;
           border-bottom: 2px solid transparent;
+          color: #718096;
+          font-weight: 500;
         }
         
         .btn-style-tab:hover {
-          color: #4dabf7;
+          color: #4299e1;
         }
         
         .btn-style-tab.active {
-          border-bottom-color: #4dabf7;
-          color: #0d6efd;
-          font-weight: 500;
+          border-bottom-color: #4299e1;
+          color: #2b6cb0;
+          font-weight: 600;
         }
         
         .btn-style-panel {
@@ -477,62 +528,110 @@ function registerCommands(editor: Editor, options: Required<ButtonPluginOptions>
         .btn-styles {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
-          gap: 10px;
+          gap: 12px;
         }
         
         .btn-style {
           cursor: pointer;
           padding: 10px;
-          border-radius: 6px;
-          background: #fff;
-          transition: all 0.2s;
+          border-radius: 10px;
+          background: #f7fafc;
+          transition: all 0.2s ease;
           text-align: center;
-          border: 1px solid #e9ecef;
+          border: 1px solid #e2e8f0;
         }
         
         .btn-style:hover {
           transform: translateY(-2px);
-          box-shadow: 0 5px 10px rgba(0,0,0,0.05);
+          box-shadow: 0 0 0 1px rgba(66, 153, 225, 0.3);
         }
         
         .btn-style.selected {
-          box-shadow: 0 0 0 2px #4dabf7;
+          background: #ebf8ff;
+          box-shadow: 0 0 0 1px rgba(66, 153, 225, 0.3);
         }
         
         .btn-style-color {
           height: 30px;
-          border-radius: 4px;
+          border-radius: 6px;
           margin-bottom: 8px;
+          transition: all 0.2s ease;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.1);
         }
         
         .btn-style-name {
-          font-size: 12px;
+          font-size: 13px;
           font-weight: 500;
+          color: #4a5568;
+          transition: color 0.2s ease;
+        }
+        
+        .btn-style.selected .btn-style-name {
+          color: #2b6cb0;
         }
         
         .button-settings-modal .gjs-mdl-dialog {
           max-width: 700px !important;
-          border-radius: 8px !important;
+          max-height: 98vh !important;
+          border-radius: 16px !important;
           overflow: hidden !important;
+          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 
+                      0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+          border: 1px solid #e2e8f0 !important;
         }
         
         .button-settings-modal .gjs-mdl-header {
           background-color: #fff !important;
-          border-bottom: 1px solid #e9ecef !important;
-          padding: 16px 20px !important;
+          border-bottom: 1px solid #e2e8f0 !important;
+          padding: 20px !important;
         }
         
         .button-settings-modal .gjs-mdl-title {
-          font-weight: 600 !important;
-          font-size: 16px !important;
+          font-weight: 700 !important;
+          font-size: 18px !important;
+          color: #1a202c !important;
         }
         
         .button-settings-modal .gjs-mdl-content {
           padding: 20px !important;
+          background-color: #fff !important;
         }
         
         .button-settings-modal .gjs-mdl-btn-close {
-          font-size: 20px !important;
+          font-size: 18px !important;
+          color: #4a5568 !important;
+          opacity: 0.8 !important;
+          transition: opacity 0.2s ease !important;
+        }
+        
+        .button-settings-modal .gjs-mdl-btn-close:hover {
+          opacity: 1 !important;
+        }
+        
+        .button-settings-modal .gjs-mdl-footer {
+          background-color: #f8fafc !important;
+          border-top: 1px solid #e2e8f0 !important;
+          padding: 20px !important;
+        }
+        
+        .button-settings-modal .gjs-mdl-btn {
+          padding: 10px 18px !important;
+          border-radius: 8px !important;
+          font-weight: 600 !important;
+          font-size: 14px !important;
+          transition: all 0.2s ease !important;
+        }
+        
+        .button-settings-modal .gjs-mdl-btn-primary {
+          background-color: #4299e1 !important;
+          color: #fff !important;
+          border: none !important;
+        }
+        
+        .button-settings-modal .gjs-mdl-btn-primary:hover {
+          background-color: #3182ce !important;
+          transform: translateY(-1px) !important;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
         }
       `;
          content.appendChild(style);
@@ -705,9 +804,21 @@ function getPreviewStyle(styleValue: string): string {
    if (!BUTTON_STYLES[styleValue]) return '';
 
    const style = BUTTON_STYLES[styleValue];
-   return Object.entries(style).map(([key, value]) => `${key}: ${value};`).join(' ');
-}
+   const styleStr = Object.entries(style).map(([key, value]) => `${key}: ${value};`).join(' ');
 
+   // Styles spécifiques selon le type de bouton
+   if (styleValue.startsWith('outline-')) {
+      return styleStr + 'border-width: 1px;';
+   } else if (styleValue.startsWith('ghost-')) {
+      // Pour les styles ghost, ajouter un effet de hover subtil
+      return styleStr + 'transition: background-color 0.2s ease; border-width: 1px; background-color: #ffff;';
+   } else if (styleValue.startsWith('flat-')) {
+      // Pour les styles flat, assurer une bonne visibilité de la couleur de fond
+      return styleStr + 'border-width: 0; opacity: 0.8;';
+   }
+
+   return styleStr;
+}
 interface ButtonModel extends Component {
    handleHrefChange: () => void;
 }

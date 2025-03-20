@@ -1,25 +1,27 @@
-import type { Plugin, Editor, Component } from "grapesjs";
+import type { Editor, Component } from 'grapesjs';
+import type { AddComponentTypeOptions } from 'grapesjs';
+import { Plugin } from "grapesjs";
 
 /**
- * Options d'interface pour le plugin d'iframe
+ * Options d'interface pour le plugin de vidéo
  */
-export interface IframePluginOptions {
+export interface VideoPluginOptions {
    /** Catégorie du bloc dans le gestionnaire de blocs */
    category?: string;
-   /** Étiquette du bloc d'iframe */
-   labelIframeBlock?: string;
-   /** URL de l'iframe par défaut */
-   placeholderIframeUrl?: string;
-   /** Options de taille d'iframe disponibles */
+   /** Étiquette du bloc de vidéo */
+   labelVideoBlock?: string;
+   /** URL de la vidéo par défaut */
+   defaultVideoUrl?: string;
+   /** Options de taille de vidéo disponibles */
    sizes?: Array<{ value: string; name: string; }>;
    /** Options de rayon de bordure disponibles */
    borderRadiusOptions?: Array<{ value: string; name: string; }>;
 }
 
 /**
- * Interface pour les styles de taille d'iframe
+ * Interface pour les styles de taille de vidéo
  */
-interface IframeSize {
+interface VideoSize {
    "width": string;
    "max-width": string;
 }
@@ -40,21 +42,21 @@ interface CommandOptions {
 }
 
 // Type de composant unique pour l'identification
-const COMPONENT_TYPE = "custom-iframe";
+const COMPONENT_TYPE = "custom-video";
 
-// Définition des tailles d'iframe
-const IFRAME_SIZES: Record<string, IframeSize> = {
+// Définition des tailles de vidéo
+const VIDEO_SIZES: Record<string, VideoSize> = {
    "small": {
-      "width": "25%",
-      "max-width": "320px"
+      "width": "50%",
+      "max-width": "400px"
    },
    "medium": {
-      "width": "50%",
-      "max-width": "640px"
+      "width": "75%",
+      "max-width": "600px"
    },
    "large": {
-      "width": "75%",
-      "max-width": "960px"
+      "width": "90%",
+      "max-width": "800px"
    },
    "full": {
       "width": "100%",
@@ -75,600 +77,563 @@ const BORDER_RADIUS: Record<string, BorderRadius> = {
    },
    "large": {
       "border-radius": "16px"
-   },
-   "pill": {
-      "border-radius": "24px"
    }
 };
 
-// Styles de base pour les iframes
-const IFRAME_BASE_STYLES = {
+// Styles de base pour les vidéos
+const VIDEO_BASE_STYLES = {
    "display": "block",
-   "max-width": "100%",
-   "height": "auto",
-   "background": "#f8f9fa",
-   "aspect-ratio": "16/9",
-   "box-shadow": "0 2px 4px rgba(0,0,0,0.1)",
-   "border": "none"
+   "margin": "0 auto",
+   "height": "350px",
+   "border": "1px solid #ddd",
+   "overflow": "hidden"
 };
 
 /**
- * Fonction pour convertir une URL YouTube en URL d'intégration
- * @param url L'URL à convertir
- * @returns L'URL convertie au format d'intégration
+ * Fonction pour convertir une URL YouTube ou Vimeo en URL d'iframe
  */
-function convertToEmbedUrl(url: string): string {
-   // Si c'est déjà une URL d'intégration, la retourner telle quelle
-   if (url.includes('/embed/')) {
-      return url;
-   }
+function getEmbedUrl(url: string): string {
+   if (!url) return '';
 
-   // Formats possibles d'URL YouTube
-   const patterns = [
-      /(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([^&]+)/i,
-      /(?:https?:\/\/)?(?:www\.)?youtu\.be\/([^\/?]+)/i
-   ];
-
-   for (const pattern of patterns) {
-      const match = url.match(pattern);
-      if (match && match[1]) {
-         return `https://www.youtube.com/embed/${match[1]}`;
-      }
+   // YouTube
+   const youtubeMatch = url.match(/(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/);
+   if (youtubeMatch && youtubeMatch[1]) {
+      return `https://www.youtube.com/embed/${youtubeMatch[1]}`;
    }
 
    // Vimeo
-   const vimeoPattern = /(?:https?:\/\/)?(?:www\.)?vimeo\.com\/([0-9]+)(?:\?.*)?$/i;
-   const vimeoMatch = url.match(vimeoPattern);
+   const vimeoMatch = url.match(/(?:vimeo\.com\/(?:video\/)?)([0-9]+)/);
    if (vimeoMatch && vimeoMatch[1]) {
       return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
    }
 
-   // Si l'URL ne correspond à aucun format connu, retourner l'URL originale
+   // Return original URL if no match
    return url;
 }
 
 /**
- * Plugin d'iframe personnalisé pour GrapesJS
+ * Plugin de vidéo personnalisé pour GrapesJS
  */
-const iframePlugin: Plugin<IframePluginOptions> = (
+const videoPlugin: Plugin<VideoPluginOptions> = (
    editor: Editor,
-   opts: IframePluginOptions = {}
+   opts: VideoPluginOptions = {}
 ) => {
    // Options avec valeurs par défaut
-   const options: Required<IframePluginOptions> = {
+   const options: Required<VideoPluginOptions> = {
       category: "Media",
-      labelIframeBlock: "Iframe",
-      placeholderIframeUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+      labelVideoBlock: "Video",
+      defaultVideoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
       sizes: [
-         { value: "small", name: "Petite" },
-         { value: "medium", name: "Moyenne" },
-         { value: "large", name: "Grande" },
-         { value: "full", name: "Pleine largeur" }
+         { value: "small", name: "Small" },
+         { value: "medium", name: "Medium" },
+         { value: "large", name: "Large" },
+         { value: "full", name: "Full Width" }
       ],
       borderRadiusOptions: [
-         { value: "none", name: "Aucun" },
-         { value: "small", name: "Petit" },
-         { value: "medium", name: "Moyen" },
-         { value: "large", name: "Grand" },
-         { value: "pill", name: "Arrondi" }
+         { value: "none", name: "None" },
+         { value: "small", name: "Small" },
+         { value: "medium", name: "Medium" },
+         { value: "large", name: "Large" }
       ],
       ...opts
    };
+
+   if (!options.sizes || !Array.isArray(options.sizes)) {
+      throw new Error('Options "sizes" must be an array of objects');
+   }
+
+   if (!options.borderRadiusOptions || !Array.isArray(options.borderRadiusOptions)) {
+      throw new Error('Options "borderRadiusOptions" must be an array of objects');
+   }
 
    registerComponents(editor);
    registerBlocks(editor, options);
    registerCommands(editor, options);
 };
 
-/**
- * Enregistre le type de composant personnalisé
- */
 function registerComponents(editor: Editor): void {
    const domc = editor.DomComponents;
-
-   // Enregistrer le composant conteneur
-   domc.addType(COMPONENT_TYPE, {
-      model: {
-         defaults: {
-            tagName: 'div',
-            name: "Iframe Container",
-            draggable: true,
-            droppable: false,
-            attributes: {
-               'data-gjs-type': COMPONENT_TYPE,
-               'data-size': 'medium',
-               'data-border-radius': 'none',
-            },
-            style: {
-               position: 'relative',
-               display: 'block',
-               ...IFRAME_SIZES['medium']
-            },
-            components: [
-               {
-                  tagName: 'iframe',
-                  attributes: {
-                     src: "https://www.youtube.com/embed/dQw4w9WgXcQ",
-                     frameborder: "0",
-                     allowfullscreen: ''
-                  },
-                  style: {
-                     ...IFRAME_BASE_STYLES,
-                     ...BORDER_RADIUS['none'],
-                     width: '100%'
-                  }
-               },
-               {
-                  tagName: 'div',
-                  draggable: false,
-                  droppable: false,
-                  toolbar: [],
-                  attributes: {
-                     class: 'iframe-edit-button',
-                  },
-                  style: {
-                     "position": 'absolute',
-                     "top": '10px',
-                     "right": '10px',
-                     "z-index": '3',
-                     "background": '#0d6efd',
-                     "color": 'white',
-                     "border": 'none',
-                     "padding": '10px 18px',
-                     "font-size": '14px',
-                     "font-weight": '500',
-                     "cursor": 'pointer',
-                     "min-width": '120px',
-                     "display": 'flex',
-                     "align-items": 'center',
-                     "justify-content": 'center',
-                     "box-shadow": '0 4px 8px rgba(0,0,0,0.15)',
-                     "transition": 'all 0.2s ease',
-                     "backdrop-filter": 'blur(4px)',
-                     "background-color": 'rgba(13, 110, 253, 0.9)',
-                     "border-radius": '7px'
-                  },
-                  content: `
-    <div style="display: flex; align-items: center; justify-content: center; width: 100%;">
-      <svg viewBox="0 0 24 24" width="18" height="18" style="margin-right: 8px;">
-        <path fill="white" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
-      </svg>
-      <span>Modifier</span>
-    </div>
-  `
-               }
-            ]
-         },
-         init() {
-            this.on('change:attributes:data-size', this.updateSize);
-            this.on('change:attributes:data-border-radius', this.updateBorderRadius);
-         },
-         updateSize() {
-            const size = this.getAttributes()['data-size'] || 'medium';
-            if (IFRAME_SIZES[size]) {
-               this.setStyle({ ...this.getStyle(), ...IFRAME_SIZES[size] });
-            }
-         },
-         updateBorderRadius() {
-            const radius = this.getAttributes()['data-border-radius'] || 'none';
-            const iframe = this.components().at(0);
-            if (iframe && BORDER_RADIUS[radius]) {
-               iframe.setStyle({ ...iframe.getStyle(), ...BORDER_RADIUS[radius] });
-            }
-         }
-      },
-      view: {
-         events() {
-            return {
-               'click': 'onClick'
-            };
-         },
-
-         onClick(e: MouseEvent) {
-            // Si le clic est sur le bouton d'édition, ouvrir la modal
-            if ((e.target as HTMLElement).closest('.iframe-edit-button')) {
-               this.onEditClick(e);
-            }
-            // Si le clic est sur le composant lui-même, également ouvrir la modal
-            else if (e.target === this.el || this.el.contains(e.target as Node)) {
-               this.onEditClick(e);
-            }
-         },
-
-         onEditClick(e: MouseEvent) {
-            e.preventDefault();
-            e.stopPropagation();
-            const editor = this.model.em?.get('Editor');
-            if (editor) {
-               editor.Commands.run('open-iframe-settings', {
-                  component: this.model
-               });
-            }
-         },
-
-         init() {
-            this.listenTo(this.model, 'change:attributes:src', this.updateIframeSrc);
-         },
-
-         updateIframeSrc() {
-            const iframe = this.el.querySelector('iframe');
-            const iframeComponent = this.model.components().at(0);
-            if (iframe && iframeComponent) {
-               const src = iframeComponent.getAttributes().src;
-               iframe.setAttribute('src', src);
-            }
-         }
-      }
-   });
+   domc.addType(COMPONENT_TYPE, createVideoType());
 }
 
-/**
- * Enregistre le bloc dans le gestionnaire de blocs
- */
 function registerBlocks(
    editor: Editor,
-   options: Required<IframePluginOptions>
+   options: Required<VideoPluginOptions>
 ): void {
    const bm = editor.BlockManager;
 
    bm.add(COMPONENT_TYPE, {
-      label: options.labelIframeBlock,
+      label: options.labelVideoBlock,
       category: options.category,
-      media: `<svg viewBox="0 0 24 24" width="24" height="24">
-         <rect x="2" y="2" width="20" height="20" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"/>
-         <rect x="6" y="6" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"/>
+      media: `<svg viewBox="0 0 24 24">
+        <path fill="currentColor" d="M10,15L15.19,12L10,9V15M21.56,7.17C21.69,7.64 21.78,8.27 21.84,9.07C21.91,9.87 21.94,10.56 21.94,11.16L22,12C22,14.19 21.84,15.8 21.56,16.83C21.31,17.73 20.73,18.31 19.83,18.56C19.36,18.69 18.5,18.78 17.18,18.84C15.88,18.91 14.69,18.94 13.59,18.94L12,19C7.81,19 5.2,18.84 4.17,18.56C3.27,18.31 2.69,17.73 2.44,16.83C2.31,16.36 2.22,15.73 2.16,14.93C2.09,14.13 2.06,13.44 2.06,12.84L2,12C2,9.81 2.16,8.2 2.44,7.17C2.69,6.27 3.27,5.69 4.17,5.44C4.64,5.31 5.5,5.22 6.82,5.16C8.12,5.09 9.31,5.06 10.41,5.06L12,5C16.19,5 18.8,5.16 19.83,5.44C20.73,5.69 21.31,6.27 21.56,7.17Z" />
       </svg>`,
       content: { type: COMPONENT_TYPE }
    });
 }
 
-/**
- * Enregistre les commandes pour interagir avec le composant
- */
 function registerCommands(
    editor: Editor,
-   options: Required<IframePluginOptions>
+   options: Required<VideoPluginOptions>
 ): void {
-   editor.Commands.add('open-iframe-settings', {
+   editor.Commands.add('open-video-settings', {
       run(editor: Editor, _, cmdOptions: CommandOptions = {}): void {
          const component = cmdOptions.component;
          if (!component) return;
 
-         const iframeComponent = component.components().at(0);
-         if (!iframeComponent) return;
-
-         // Récupérer les paramètres actuels
-         const currentSrc = iframeComponent.getAttributes().src || options.placeholderIframeUrl;
+         // Récupérer les paramètres actuels de la vidéo
+         const currentVideoUrl = component.get('videoUrl') || options.defaultVideoUrl;
          const currentSize = component.getAttributes()['data-size'] || "medium";
          const currentBorderRadius = component.getAttributes()['data-border-radius'] || "none";
-         const currentAllowFullscreen = iframeComponent.getAttributes().allowfullscreen !== undefined;
 
          // Créer le contenu de la modal
-         const modalContent = document.createElement('div');
-         modalContent.innerHTML = `
-            <div class="iframe-settings">
-               <form id="iframe-settings-form">
-                  <div class="iframe-section">
-                     <label class="iframe-label">URL de l'iframe</label>
-                     <div class="iframe-input-wrap">
-                        <input type="text" class="iframe-input iframe-src-input" value="${currentSrc}" placeholder="https://exemple.com/embed">
-                     </div>
-                     <div class="iframe-url-info">
-                        Vous pouvez coller n'importe quelle URL YouTube ou Vimeo, elle sera automatiquement convertie au format d'intégration.
-                     </div>
-                  </div>
-                  
-                  <div class="iframe-section">
-                     <label class="iframe-label">Taille</label>
-                     <div class="iframe-sizes">
-                        ${options.sizes.map(size => `
-                           <div class="iframe-size ${currentSize === size.value ? 'selected' : ''}" data-size="${size.value}">
-                              <div class="iframe-size-bar" style="width: ${size.value === 'small' ? '25%' : size.value === 'medium' ? '50%' : size.value === 'large' ? '75%' : '100%'}"></div>
-                              <div class="iframe-size-name">${size.name}</div>
-                           </div>
-                        `).join('')}
-                     </div>
-                  </div>
-                  
-                  <div class="iframe-section">
-                     <label class="iframe-label">Rayon des coins</label>
-                     <div class="iframe-radius-options">
-                        ${options.borderRadiusOptions.map(radius => `
-                           <div class="iframe-radius ${currentBorderRadius === radius.value ? 'selected' : ''}" data-radius="${radius.value}">
-                              <div class="iframe-radius-preview" style="border-radius: ${radius.value === 'none' ? '0' : radius.value === 'small' ? '4px' : radius.value === 'medium' ? '8px' : radius.value === 'large' ? '16px' : '24px'}"></div>
-                              <div class="iframe-radius-name">${radius.name}</div>
-                           </div>
-                        `).join('')}
-                     </div>
-                  </div>
-                  
-                  <div class="iframe-section">
-                     <label class="iframe-label">Options</label>
-                     <div class="iframe-options">
-                        <label class="iframe-option">
-                           <input type="checkbox" class="iframe-fullscreen-input" ${currentAllowFullscreen ? 'checked' : ''}>
-                           <span>Autoriser le plein écran</span>
-                        </label>
-                     </div>
-                  </div>
-                  
-                  <div class="iframe-section">
-                     <button type="submit" class="iframe-apply-button">Appliquer</button>
-                  </div>
-               </form>
+         const content = document.createElement('div');
+         content.innerHTML = `
+        <div class="video-settings">
+          <div class="video-content">
+            <div class="video-section">
+              <label class="video-label">URL de la vidéo (YouTube, Vimeo ou autre)</label>
+              <div class="video-input-wrap">
+                <input type="text" class="video-input video-url-input" value="${currentVideoUrl}" placeholder="Ex: https://www.youtube.com/watch?v=dQw4w9WgXcQ">
+                <div class="video-input-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+                    <line x1="10" y1="15" x2="10" y2="9"></line>
+                    <line x1="14" y1="9" x2="14" y2="15"></line>
+                  </svg>
+                </div>
+              </div>
+              <div class="video-input-help">
+                Collez l'URL complète de la vidéo YouTube ou Vimeo, ou directement une URL d'iframe
+              </div>
             </div>
-         `;
+            
+            <div class="video-section">
+              <label class="video-label">Taille</label>
+              <div class="video-sizes">
+                ${options.sizes.map(size => `
+                  <div class="video-size ${currentSize === size.value ? 'selected' : ''}" data-size="${size.value}">
+                    <div class="video-size-inner">
+                      <div class="video-size-bar" style="width: ${size.value === 'small' ? '50%' : size.value === 'medium' ? '75%' : size.value === 'large' ? '90%' : '100%'}"></div>
+                    </div>
+                    <div class="video-size-name">${size.name}</div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+            
+            <div class="video-section">
+              <label class="video-label">Rayon des coins</label>
+              <div class="video-radius-options">
+                ${options.borderRadiusOptions.map(radius => `
+                  <div class="video-radius ${currentBorderRadius === radius.value ? 'selected' : ''}" data-radius="${radius.value}">
+                    <div class="video-radius-inner">
+                      <div class="video-radius-preview" style="border-radius: ${radius.value === 'none' ? '0' : radius.value === 'small' ? '4px' : radius.value === 'medium' ? '8px' : '16px'}"></div>
+                    </div>
+                    <div class="video-radius-name">${radius.name}</div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
 
          // Ajouter les styles
          const style = document.createElement('style');
          style.textContent = `
-            .iframe-settings {
-               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-               display: flex;
-               flex-direction: column;
-               color: #333;
-            }
-            
-            .iframe-section {
-               margin-bottom: 20px;
-            }
-            
-            .iframe-label {
-               display: block;
-               font-weight: 500;
-               margin-bottom: 10px;
-               color: #343a40;
-            }
-            
-            .iframe-input-wrap {
-               position: relative;
-            }
-            
-            .iframe-input {
-               width: 100%;
-               padding: 10px 12px;
-               border: 1px solid #dee2e6;
-               border-radius: 6px;
-               font-size: 14px;
-               transition: border-color 0.2s;
-               box-sizing: border-box;
-            }
-            
-            .iframe-input:focus {
-               border-color: #4dabf7;
-               outline: none;
-               box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
-            }
-            
-            .iframe-url-info {
-               font-size: 12px;
-               color: #6c757d;
-               margin-top: 8px;
-            }
-            
-            .iframe-sizes {
-               display: flex;
-               gap: 10px;
-            }
-            
-            .iframe-size {
-               flex: 1;
-               cursor: pointer;
-               padding: 10px;
-               border-radius: 6px;
-               background: #f8f9fa;
-               transition: all 0.2s;
-               text-align: center;
-            }
-            
-            .iframe-size:hover {
-               background: #e9ecef;
-            }
-            
-            .iframe-size.selected {
-               background: rgba(13, 110, 253, 0.1);
-               box-shadow: 0 0 0 2px #4dabf7;
-            }
-            
-            .iframe-size-bar {
-               height: 6px;
-               background: #adb5bd;
-               border-radius: 3px;
-               margin: 10px auto;
-            }
-            
-            .iframe-size-name {
-               font-size: 13px;
-            }
-            
-            .iframe-radius-options {
-               display: grid;
-               grid-template-columns: repeat(5, 1fr);
-               gap: 10px;
-            }
-            
-            .iframe-radius {
-               cursor: pointer;
-               padding: 10px;
-               border-radius: 6px;
-               background: #f8f9fa;
-               transition: all 0.2s;
-               text-align: center;
-            }
-            
-            .iframe-radius:hover {
-               background: #e9ecef;
-            }
-            
-            .iframe-radius.selected {
-               background: rgba(13, 110, 253, 0.1);
-               box-shadow: 0 0 0 2px #4dabf7;
-            }
-            
-            .iframe-radius-preview {
-               width: 40px;
-               height: 40px;
-               background: #adb5bd;
-               margin: 0 auto 8px;
-            }
-            
-            .iframe-radius-name {
-               font-size: 12px;
-            }
-            
-            .iframe-options {
-               display: grid;
-               grid-template-columns: repeat(2, 1fr);
-               gap: 12px;
-            }
-            
-            .iframe-option {
-               display: flex;
-               align-items: center;
-               gap: 8px;
-               cursor: pointer;
-               font-size: 14px;
-            }
-            
-            .iframe-option input[type="checkbox"] {
-               width: 16px;
-               height: 16px;
-               cursor: pointer;
-            }
-            
-            .iframe-apply-button {
-               background-color: #0d6efd;
-               color: white;
-               border: none;
-               border-radius: 4px;
-               padding: 10px 15px;
-               font-size: 14px;
-               font-weight: 500;
-               cursor: pointer;
-               width: 100%;
-               transition: background-color 0.2s;
-            }
-            
-            .iframe-apply-button:hover {
-               background-color: #0b5ed7;
-            }
-            
-            .iframe-settings-modal .gjs-mdl-dialog {
-               max-width: 700px !important;
-               border-radius: 8px !important;
-               overflow: hidden !important;
-            }
-            
-            .iframe-settings-modal .gjs-mdl-header {
-               background-color: #fff !important;
-               border-bottom: 1px solid #e9ecef !important;
-               padding: 16px 20px !important;
-            }
-            
-            .iframe-settings-modal .gjs-mdl-title {
-               font-weight: 600 !important;
-               font-size: 16px !important;
-            }
-            
-            .iframe-settings-modal .gjs-mdl-content {
-               padding: 20px !important;
-            }
-            
-            .iframe-settings-modal .gjs-mdl-btn-close {
-               font-size: 20px !important;
-            }
-         `;
-         modalContent.appendChild(style);
+        .video-settings {
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+          display: flex;
+          flex-direction: column;
+          color: #1a202c;
+          padding: 0;
+          max-width: 650px;
+          margin: 0 auto;
+        }
+        
+        .video-content {
+          padding: 0;
+        }
+        
+        .video-section {
+          margin-bottom: 24px;
+        }
+        
+        .video-label {
+          display: block;
+          font-weight: 600;
+          margin-bottom: 12px;
+          color: #2d3748;
+          font-size: 14px;
+          letter-spacing: 0.01em;
+        }
+        
+        .video-input-wrap {
+          position: relative;
+        }
+        
+        .video-input {
+          width: 100%;
+          padding: 12px 16px;
+          padding-right: 40px;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          font-size: 14px;
+          transition: all 0.2s ease;
+          box-sizing: border-box;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+          background-color: #fff;
+        }
+        
+        .video-input:focus {
+          border-color: #4299e1;
+          outline: none;
+          box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+        }
+        
+        .video-input-icon {
+          position: absolute;
+          right: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #a0aec0;
+        }
+        
+        .video-input-help {
+          font-size: 13px;
+          color: #718096;
+          margin-top: 8px;
+          line-height: 1.5;
+        }
+        
+        .video-sizes {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 12px;
+        }
+        
+        .video-size {
+          cursor: pointer;
+          padding: 14px 10px;
+          border-radius: 10px;
+          background: #f7fafc;
+          transition: all 0.2s ease;
+          text-align: center;
+          border: 1px solid #e2e8f0;
+        }
+        
+        .video-size:hover {
+          transform: translateY(-2px);
+          background: #ebf8ff;
+          box-shadow: 0 0 0 1px rgba(66, 153, 225, 0.3);
+        }
+        
+        .video-size.selected {
+          background: #ebf8ff;
+          box-shadow: 0 0 0 1px rgba(66, 153, 225, 0.3);
+        }
+        
+        .video-size-inner {
+          height: 25px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        
+        .video-size-bar {
+          height: 18px;
+          border-radius: 4px;
+          background: #fff;
+          border: 1px solid #e2e8f0;
+          transition: all 0.2s ease;
+        }
+        
+        .video-size:hover .video-size-bar {
+          opacity: 0.8;
+        }
+        
+        .video-size-name {
+          font-size: 13px;
+          margin-top: 8px;
+          font-weight: 500;
+          color: #4a5568;
+          transition: color 0.2s ease;
+        }
+        
+        .video-size.selected .video-size-name {
+          color: #2b6cb0;
+        }
+        
+        .video-radius-options {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 12px;
+        }
+        
+        .video-radius {
+          cursor: pointer;
+          padding: 10px;
+          border-radius: 10px;
+          background: #f7fafc;
+          transition: all 0.2s ease;
+          text-align: center;
+          display:flex;
+          flex-direction: column;
+          justify-content: center;
+          gap: 12px;
+          border: 1px solid #e2e8f0;
+        }
+        
+        .video-radius:hover {
+          transform: translateY(-2px);
+          background: #ebf8ff;
+          box-shadow: 0 0 0 1px rgba(66, 153, 225, 0.3);
+        }
+        
+        .video-radius.selected {
+          background: #ebf8ff;
+          box-shadow: 0 0 0 1px rgba(66, 153, 225, 0.3);
+        }
+        
+        .video-radius-inner {
+          height: 25px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        
+        .video-radius-preview {
+          width: 30px;
+          height: 30px;
+          background: #fff;
+          border: 1px solid #e2e8f0;
+          transition: all 0.2s ease;
+        }
+        
+        .video-radius:hover .video-radius-preview {
+          opacity: 0.8;
+        }
+        
+        .video-radius-name {
+          font-size: 13px;
+          font-weight: 500;
+          color: #4a5568;
+          transition: color 0.2s ease;
+        }
+        
+        .video-radius.selected .video-radius-name {
+          color: #2b6cb0;
+        }
+        
+        .video-settings-modal .gjs-mdl-dialog {
+          max-width: 700px !important;
+          max-height: 98vh !important;
+          border-radius: 16px !important;
+          overflow: hidden !important;
+          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 
+                      0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+          border: 1px solid #e2e8f0 !important;
+        }
+        
+        .video-settings-modal .gjs-mdl-header {
+          background-color: #fff !important;
+          border-bottom: 1px solid #e2e8f0 !important;
+          padding: 20px !important;
+        }
+        
+        .video-settings-modal .gjs-mdl-title {
+          font-weight: 700 !important;
+          font-size: 18px !important;
+          color: #1a202c !important;
+        }
+        
+        .video-settings-modal .gjs-mdl-content {
+          padding: 20px !important;
+          background-color: #fff !important;
+        }
+        
+        .video-settings-modal .gjs-mdl-btn-close {
+          font-size: 18px !important;
+          color: #4a5568 !important;
+          opacity: 0.8 !important;
+          transition: opacity 0.2s ease !important;
+        }
+        
+        .video-settings-modal .gjs-mdl-btn-close:hover {
+          opacity: 1 !important;
+        }
+        
+        .video-settings-modal .gjs-mdl-footer {
+          background-color: #f8fafc !important;
+          border-top: 1px solid #e2e8f0 !important;
+          padding: 20px !important;
+        }
+        
+        .video-settings-modal .gjs-mdl-btn {
+          padding: 10px 18px !important;
+          border-radius: 8px !important;
+          font-weight: 600 !important;
+          font-size: 14px !important;
+          transition: all 0.2s ease !important;
+        }
+        
+        .video-settings-modal .gjs-mdl-btn-primary {
+          background-color: #4299e1 !important;
+          color: #fff !important;
+          border: none !important;
+        }
+        
+        .video-settings-modal .gjs-mdl-btn-primary:hover {
+          background-color: #3182ce !important;
+          transform: translateY(-1px) !important;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+        }
+      `;
+         content.appendChild(style);
 
-         // Ouvrir la modal
          editor.Modal.open({
-            title: 'Paramètres d\'Iframe',
-            content: modalContent,
+            title: 'Paramètres de la vidéo',
+            content,
             attributes: {
-               class: 'iframe-settings-modal'
+               class: 'video-settings-modal'
+            }
+         }).onceClose(() => {
+            // Appliquer les modifications au composant lorsque la modal se ferme
+            const videoUrlInput = content.querySelector('.video-url-input') as HTMLInputElement;
+
+            if (videoUrlInput) {
+               const videoUrl = videoUrlInput.value.trim() || options.defaultVideoUrl;
+               component.set('videoUrl', videoUrl);
             }
          });
 
-         // Sélectionner les éléments du formulaire
-         const form = modalContent.querySelector('#iframe-settings-form') as HTMLFormElement;
-         const srcInput = modalContent.querySelector('.iframe-src-input') as HTMLInputElement;
-         const sizeOptions = modalContent.querySelectorAll('.iframe-size');
-         const radiusOptions = modalContent.querySelectorAll('.iframe-radius');
-         const fullscreenInput = modalContent.querySelector('.iframe-fullscreen-input') as HTMLInputElement;
+         // Event listener pour l'URL
+         const videoUrlInput = content.querySelector('.video-url-input') as HTMLInputElement;
+         videoUrlInput.addEventListener('input', function () {
+            // Cette fonction est conservée pour maintenir la cohérence
+            // mais ne fait rien puisque l'aperçu a été retiré
+         });
 
-         // Variables pour stocker les valeurs sélectionnées
-         let selectedSize = currentSize;
-         let selectedRadius = currentBorderRadius;
-
-         // Gérer les clics sur les options de taille
+         // Event listeners pour les options de taille
+         const sizeOptions = content.querySelectorAll('.video-size');
          sizeOptions.forEach(option => {
             option.addEventListener('click', function (this: HTMLElement) {
-               sizeOptions.forEach(el => el.classList.remove('selected'));
+               // Mise à jour visuelle
+               sizeOptions.forEach(el => {
+                  el.classList.remove('selected');
+               });
                this.classList.add('selected');
-               selectedSize = this.getAttribute('data-size') || 'medium';
+
+               // Appliquer la taille
+               const size = this.getAttribute('data-size');
+               if (!size || !VIDEO_SIZES[size]) return;
+
+               // Mettre à jour les styles
+               const currentCompStyles = { ...component.getStyle() };
+               component.setStyle({
+                  ...currentCompStyles,
+                  ...VIDEO_SIZES[size]
+               });
+
+               // Mettre à jour l'attribut
+               component.set('attributes', {
+                  ...component.getAttributes(),
+                  'data-size': size
+               });
             });
          });
 
-         // Gérer les clics sur les options de rayon
+         // Event listeners pour les options de rayon de bordure
+         const radiusOptions = content.querySelectorAll('.video-radius');
          radiusOptions.forEach(option => {
             option.addEventListener('click', function (this: HTMLElement) {
-               radiusOptions.forEach(el => el.classList.remove('selected'));
+               // Mise à jour visuelle
+               radiusOptions.forEach(el => {
+                  el.classList.remove('selected');
+               });
                this.classList.add('selected');
-               selectedRadius = this.getAttribute('data-radius') || 'none';
-            });
-         });
 
-         // Gérer la soumission du formulaire
-         form.addEventListener('submit', (e) => {
-            e.preventDefault();
+               // Appliquer le rayon
+               const radius = this.getAttribute('data-radius');
+               if (!radius || !BORDER_RADIUS[radius]) return;
 
-            // Récupérer les valeurs
-            let src = srcInput.value || options.placeholderIframeUrl;
-
-            // Convertir l'URL si nécessaire
-            src = convertToEmbedUrl(src);
-
-            const allowFullscreen = fullscreenInput.checked;
-
-            // 1. Mettre à jour l'iframe
-            const iframeAttrs = { ...iframeComponent.getAttributes() };
-            iframeAttrs.src = src;
-
-            if (allowFullscreen) {
-               iframeAttrs.allowfullscreen = '';
-            } else {
-               delete iframeAttrs.allowfullscreen;
-            }
-
-            iframeComponent.set('attributes', iframeAttrs);
-
-            // 2. Mettre à jour le conteneur
-            component.set('attributes', {
-               ...component.getAttributes(),
-               'data-size': selectedSize,
-               'data-border-radius': selectedRadius
-            });
-
-            // 3. Appliquer les styles
-            if (IFRAME_SIZES[selectedSize]) {
+               // Mettre à jour les styles
+               const currentCompStyles = { ...component.getStyle() };
                component.setStyle({
-                  ...component.getStyle(),
-                  ...IFRAME_SIZES[selectedSize]
+                  ...currentCompStyles,
+                  ...BORDER_RADIUS[radius]
                });
-            }
 
-            if (BORDER_RADIUS[selectedRadius]) {
-               iframeComponent.setStyle({
-                  ...iframeComponent.getStyle(),
-                  ...BORDER_RADIUS[selectedRadius]
+               // Mettre à jour l'attribut
+               component.set('attributes', {
+                  ...component.getAttributes(),
+                  'data-border-radius': radius
                });
-            }
-
-            // Fermer la modal
-            editor.Modal.close();
+            });
          });
       }
    });
 }
 
-export default iframePlugin;
+function createVideoType(): AddComponentTypeOptions {
+   return {
+      isComponent: (el: HTMLElement) => {
+         if (el.getAttribute('data-gjs-type') === COMPONENT_TYPE) {
+            return { type: COMPONENT_TYPE };
+         }
+         return undefined;
+      },
+      model: {
+         defaults: {
+            tagName: 'div',
+            name: "Video",
+            draggable: true,
+            droppable: false,
+            videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            attributes: {
+               'data-gjs-type': COMPONENT_TYPE,
+               'data-size': 'full',
+               'data-border-radius': 'none'
+            },
+            style: {
+               ...VIDEO_BASE_STYLES,
+               ...BORDER_RADIUS['none']
+            },
+         },
+         init() {
+            this.on('change:videoUrl', this.updateVideoContent);
+            const videoUrl = this.get('videoUrl');
+            this.updateIframe(getEmbedUrl(videoUrl));
+         },
+         updateVideoContent() {
+            const videoUrl = this.get('videoUrl');
+            this.updateIframe(getEmbedUrl(videoUrl));
+         },
+         updateIframe(embedUrl: string) {
+            const iframe = `<iframe src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="width:100%; height:100%; border:none;"></iframe>`;
+            this.components(iframe);
+         }
+      },
+      view: {
+         events() {
+            return {
+               dblclick: 'onDblClick'
+            };
+         },
+         onDblClick(e: MouseEvent) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const editor = this.model.em?.get('Editor');
+            if (editor) {
+               editor.Commands.run('open-video-settings', {
+                  component: this.model
+               });
+            }
+         }
+      }
+   };
+}
+
+export default videoPlugin;

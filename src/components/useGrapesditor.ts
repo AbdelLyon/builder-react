@@ -11,7 +11,7 @@ interface UseGrapesJSEditorConfig {
 
 interface UseGrapesditorResult {
   onEditor: (editor: Editor) => void;
-  onUpdate: (projectData: ProjectData) => void;
+  onUpdate: (projectData: ProjectData, editor: Editor) => void;
   onReady: (editor: Editor) => void;
 }
 
@@ -47,7 +47,9 @@ export const useGrapesditor = (
   );
 
   // Handler pour les mises à jour du projet
-  const onUpdate = useCallback((projectData: ProjectData) => {
+  const onUpdate = useCallback((projectData: ProjectData, editor: Editor) => {
+    console.log(editor.getHtml());
+
     console.log({
       name: "onUpdate methode",
       comonents: projectData.pages,

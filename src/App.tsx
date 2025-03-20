@@ -8,7 +8,6 @@ import Topbar from "./components/Topbar";
 import contactBlockPlugin from "./contactBlockPlugin";
 import galleryBlockPlugin from "./galleryBlockPlugin";
 import carouselBlockPlugin from "./carouselPlugin";
-import basicPlugin from "./basicPlugin";
 import spacerPlugin from "./spacerPlugin";
 import buttonPlugin from "./buttonPlugin";
 import imagePlugin from "./imagePlugin";
@@ -36,12 +35,11 @@ export default function App(): JSX.Element {
       grapesjsCss="https://unpkg.com/grapesjs/dist/css/grapes.min.css"
       options={grapesConfig}
       plugins={[
-        // contactBlockPlugin,
-        // galleryBlockPlugin,
-        // carouselBlockPlugin,
-        // spacerPlugin,
+        contactBlockPlugin,
+        galleryBlockPlugin,
+        carouselBlockPlugin,
+        spacerPlugin,
         buttonPlugin,
-        // pluginTailwind,
         imagePlugin,
         mapPlugin,
         videoPlugin,

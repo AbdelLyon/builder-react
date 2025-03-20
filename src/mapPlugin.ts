@@ -1,5 +1,6 @@
-import type { Plugin, Editor, Component } from "grapesjs";
-import type { AddComponentTypeOptions } from "grapesjs";
+import type { Editor, Component } from 'grapesjs';
+import type { AddComponentTypeOptions } from 'grapesjs';
+import { Plugin } from "grapesjs";
 
 /**
  * Options d'interface pour le plugin de carte
@@ -9,21 +10,29 @@ export interface MapPluginOptions {
    category?: string;
    /** Étiquette du bloc de carte */
    labelMapBlock?: string;
-   /** Latitude par défaut */
-   defaultLatitude?: number;
-   /** Longitude par défaut */
-   defaultLongitude?: number;
-   /** Zoom par défaut */
+   /** Adresse par défaut pour la carte */
+   defaultAddress?: string;
+   /** Niveau de zoom par défaut */
    defaultZoom?: number;
-   /** Hauteurs disponibles */
-   heights?: Array<{ value: string; name: string; }>;
+   /** Options de taille de carte disponibles */
+   sizes?: Array<{ value: string; name: string; }>;
+   /** Options de rayon de bordure disponibles */
+   borderRadiusOptions?: Array<{ value: string; name: string; }>;
 }
 
 /**
- * Interface pour les styles de hauteur de carte
+ * Interface pour les styles de taille de carte
  */
-interface MapHeight {
-   "height": string;
+interface MapSize {
+   "width": string;
+   "max-width": string;
+}
+
+/**
+ * Interface pour les styles de rayon de bordure
+ */
+interface BorderRadius {
+   "border-radius": string;
 }
 
 /**
@@ -34,41 +43,52 @@ interface CommandOptions {
    [key: string]: unknown;
 }
 
-/**
- * Interface pour la réponse du géocodage
- */
-interface GeocodingResult {
-   lat: string;
-   lon: string;
-   display_name: string;
-}
-
 // Type de composant unique pour l'identification
-const COMPONENT_TYPE = "custom-map";
+const COMPONENT_TYPE = "map";
 
-// Définition des hauteurs de carte
-const MAP_HEIGHTS: Record<string, MapHeight> = {
+// Définition des tailles de carte
+const MAP_SIZES: Record<string, MapSize> = {
    "small": {
-      "height": "200px"
+      "width": "50%",
+      "max-width": "400px"
    },
    "medium": {
-      "height": "350px"
+      "width": "75%",
+      "max-width": "600px"
    },
    "large": {
-      "height": "500px"
+      "width": "90%",
+      "max-width": "800px"
    },
    "full": {
-      "height": "70vh"
+      "width": "100%",
+      "max-width": "100%"
+   }
+};
+
+// Définition des rayons de bordure
+const BORDER_RADIUS: Record<string, BorderRadius> = {
+   "none": {
+      "border-radius": "0"
+   },
+   "small": {
+      "border-radius": "4px"
+   },
+   "medium": {
+      "border-radius": "8px"
+   },
+   "large": {
+      "border-radius": "16px"
    }
 };
 
 // Styles de base pour les cartes
 const MAP_BASE_STYLES = {
-   "width": "100%",
+   "display": "block",
+   "margin": "0 auto",
    "height": "350px",
-   "border": "none",
-   "border-radius": "4px",
-   "box-shadow": "0 2px 4px rgba(0,0,0,0.1)"
+   "border": "1px solid #ddd",
+   "overflow": "hidden"
 };
 
 /**
@@ -80,19 +100,32 @@ const mapPlugin: Plugin<MapPluginOptions> = (
 ) => {
    // Options avec valeurs par défaut
    const options: Required<MapPluginOptions> = {
-      category: "Media",
-      labelMapBlock: "Carte",
-      defaultLatitude: 48.8566,
-      defaultLongitude: 2.3522,
-      defaultZoom: 13,
-      heights: [
-         { value: "small", name: "Petite" },
-         { value: "medium", name: "Moyenne" },
-         { value: "large", name: "Grande" },
-         { value: "full", name: "Pleine hauteur" }
+      category: "Map",
+      labelMapBlock: "Map",
+      defaultAddress: "Paris, France",
+      defaultZoom: 10,
+      sizes: [
+         { value: "small", name: "Small" },
+         { value: "medium", name: "Medium" },
+         { value: "large", name: "Large" },
+         { value: "full", name: "Full Width" }
+      ],
+      borderRadiusOptions: [
+         { value: "none", name: "None" },
+         { value: "small", name: "Small" },
+         { value: "medium", name: "Medium" },
+         { value: "large", name: "Large" }
       ],
       ...opts
    };
+
+   if (!options.sizes || !Array.isArray(options.sizes)) {
+      throw new Error('Options "sizes" must be an array of objects');
+   }
+
+   if (!options.borderRadiusOptions || !Array.isArray(options.borderRadiusOptions)) {
+      throw new Error('Options "borderRadiusOptions" must be an array of objects');
+   }
 
    registerComponents(editor);
    registerBlocks(editor, options);
@@ -113,39 +146,11 @@ function registerBlocks(
    bm.add(COMPONENT_TYPE, {
       label: options.labelMapBlock,
       category: options.category,
-      media: `<svg viewBox="0 0 24 24" width="24" height="24">
-      <path fill="none" stroke="currentColor" stroke-width="2" d="M9,4 L3,7 L3,20 L9,17 L15,20 L21,17 L21,4 L15,7 L9,4 Z"></path>
-      <path fill="none" stroke="currentColor" stroke-width="2" d="M9,4 L9,17"></path>
-      <path fill="none" stroke="currentColor" stroke-width="2" d="M15,7 L15,20"></path>
-    </svg>`,
+      media: `<svg viewBox="0 0 24 24">
+        <path fill="currentColor" d="M20.5,3L20.34,3.03L15,5.1L9,3L3.36,4.9C3.15,4.97 3,5.15 3,5.38V20.5A0.5,0.5 0 0,0 3.5,21L3.66,20.97L9,18.9L15,21L20.64,19.1C20.85,19.03 21,18.85 21,18.62V3.5A0.5,0.5 0 0,0 20.5,3M10,5.47L14,6.87V18.53L10,17.13V5.47M5,6.46L8,5.45V17.15L5,18.31V6.46M19,17.54L16,18.55V6.86L19,5.7V17.54Z" />
+      </svg>`,
       content: { type: COMPONENT_TYPE }
    });
-}
-
-/**
- * Fonction pour géocoder une adresse en utilisant Nominatim
- */
-async function geocodeAddress(address: string): Promise<GeocodingResult | null> {
-   try {
-      const encodedAddress = encodeURIComponent(address);
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1`);
-      const data = await response.json();
-
-      if (data && data.length > 0) {
-         return data[0] as GeocodingResult;
-      }
-      return null;
-   } catch (error) {
-      console.error('Erreur de géocodage:', error);
-      return null;
-   }
-}
-
-/**
- * Génère l'URL pour l'iframe Google Maps
- */
-function generateMapUrl(lat: number, lng: number, zoom: number): string {
-   return `https://maps.google.com/maps?q=${lat},${lng}&z=${zoom}&output=embed`;
 }
 
 function registerCommands(
@@ -157,410 +162,443 @@ function registerCommands(
          const component = cmdOptions.component;
          if (!component) return;
 
-         const iframeComponent = component.components().at(0);
-         if (!iframeComponent) return;
-
          // Récupérer les paramètres actuels de la carte
-         const currentAttrs = component.getAttributes();
-         const currentLatitude = currentAttrs['data-latitude'] || options.defaultLatitude;
-         const currentLongitude = currentAttrs['data-longitude'] || options.defaultLongitude;
-         const currentZoom = currentAttrs['data-zoom'] || options.defaultZoom;
-         const currentHeight = currentAttrs['data-height'] || "medium";
-         const currentAddress = currentAttrs['data-address'] || "";
+         const currentAddress = component.get('address') || options.defaultAddress;
+         const currentZoom = component.get('zoom') || options.defaultZoom;
+         const currentSize = component.getAttributes()['data-size'] || "medium";
+         const currentBorderRadius = component.getAttributes()['data-border-radius'] || "none";
 
          // Créer le contenu de la modal
-         const modalContent = document.createElement('div');
-         modalContent.innerHTML = `
-            <div class="map-settings">
-               <form id="map-settings-form">
-                  <div class="map-section">
-                     <label class="map-label">Rechercher par adresse</label>
-                     <div class="map-input-wrap">
-                        <input type="text" class="map-input map-address-input" value="${currentAddress}" placeholder="Ex: 1 rue de Rivoli, Paris, France">
-                        <div class="map-address-results"></div>
-                        <button type="button" class="map-search-button">Rechercher</button>
-                     </div>
-                     <div class="map-address-status"></div>
-                  </div>
-                  
-                  <div class="map-section">
-                     <label class="map-label">Coordonnées</label>
-                     <div class="map-location">
-                        <div class="map-input-group">
-                           <label class="map-sublabel">Latitude</label>
-                           <div class="map-input-wrap">
-                              <input class="map-input map-latitude-input" value="${currentLatitude}">
-                           </div>
-                        </div>
-                        <div class="map-input-group">
-                           <label class="map-sublabel">Longitude</label>
-                           <div class="map-input-wrap">
-                              <input class="map-input map-longitude-input" value="${currentLongitude}">
-                           </div>
-                        </div>
-                     </div>
-                  </div>
-                  
-                  <div class="map-section">
-                     <label class="map-label">Zoom</label>
-                     <div class="map-input-wrap map-zoom-wrap">
-                        <input type="range" min="1" max="18" class="map-zoom-slider" value="${currentZoom}">
-                        <span class="map-zoom-value">${currentZoom}</span>
-                     </div>
-                  </div>
-                  
-                  <div class="map-section">
-                     <label class="map-label">Hauteur</label>
-                     <div class="map-heights">
-                        ${options.heights.map(height => `
-                           <div class="map-height ${currentHeight === height.value ? 'selected' : ''}" data-height="${height.value}">
-                              <div class="map-height-bar" style="height: ${height.value === 'small' ? '30px' : height.value === 'medium' ? '45px' : height.value === 'large' ? '60px' : '75px'}"></div>
-                              <div class="map-height-name">${height.name}</div>
-                           </div>
-                        `).join('')}
-                     </div>
-                  </div>
-                  
-                  <div class="map-section">
-                     <button type="submit" class="map-apply-button">Appliquer</button>
-                  </div>
-               </form>
+         const content = document.createElement('div');
+         content.innerHTML = `
+        <div class="map-settings">
+          <div class="map-section">
+            <label class="map-label">Adresse</label>
+            <div class="map-input-wrap">
+              <input type="text" class="map-input map-address-input" value="${currentAddress}" placeholder="Ex: Paris, France">
+              <div class="map-input-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="currentColor"/>
+                </svg>
+              </div>
             </div>
-         `;
+          </div>
+          
+          <div class="map-section">
+            <label class="map-label">Niveau de zoom (1-20)</label>
+            <div class="map-zoom-container">
+              <input type="range" class="map-zoom-slider" min="1" max="20" step="1" value="${currentZoom}">
+              <div class="map-zoom-value">${currentZoom}</div>
+            </div>
+          </div>
+          
+          <div class="map-section">
+            <label class="map-label">Taille</label>
+            <div class="map-sizes">
+              ${options.sizes.map(size => `
+                <div class="map-size ${currentSize === size.value ? 'selected' : ''}" data-size="${size.value}">
+                  <div class="map-size-bar" style="width: ${size.value === 'small' ? '50%' : size.value === 'medium' ? '75%' : size.value === 'large' ? '90%' : '100%'}"></div>
+                  <div class="map-size-name">${size.name}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+          
+          <div class="map-section">
+            <label class="map-label">Rayon des coins</label>
+            <div class="map-radius-options">
+              ${options.borderRadiusOptions.map(radius => `
+                <div class="map-radius ${currentBorderRadius === radius.value ? 'selected' : ''}" data-radius="${radius.value}">
+                  <div class="map-radius-preview" style="border-radius: ${radius.value === 'none' ? '0' : radius.value === 'small' ? '4px' : radius.value === 'medium' ? '8px' : '16px'}"></div>
+                  <div class="map-radius-name">${radius.name}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
 
          // Ajouter les styles
          const style = document.createElement('style');
          style.textContent = `
-            .map-settings {
-               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-               display: flex;
-               flex-direction: column;
-               color: #333;
-            }
-            
-            .map-section {
-               margin-bottom: 20px;
-            }
-            
-            .map-label {
-               display: block;
-               font-weight: 500;
-               margin-bottom: 10px;
-               color: #343a40;
-            }
-            
-            .map-sublabel {
-               display: block;
-               font-size: 12px;
-               margin-bottom: 5px;
-               color: #495057;
-            }
-            
-            .map-input-wrap {
-               position: relative;
-               display: flex;
-               align-items: center;
-               gap: 10px;
-            }
-            
-            .map-input {
-               flex: 1;
-               padding: 10px 12px;
-               border: 1px solid #dee2e6;
-               border-radius: 6px;
-               font-size: 14px;
-               transition: border-color 0.2s;
-               box-sizing: border-box;
-            }
-            
-            .map-input:focus {
-               border-color: #4dabf7;
-               outline: none;
-               box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
-            }
-            
-            .map-search-button {
-               padding: 10px 16px;
-               background-color: #0d6efd;
-               color: white;
-               border: none;
-               border-radius: 6px;
-               font-weight: 500;
-               cursor: pointer;
-               transition: background-color 0.2s;
-            }
-            
-            .map-search-button:hover {
-               background-color: #0b5ed7;
-            }
-            
-            .map-address-status {
-               margin-top: 8px;
-               font-size: 14px;
-            }
-            
-            .map-address-results {
-               position: absolute;
-               top: 100%;
-               left: 0;
-               right: 0;
-               background: white;
-               border: 1px solid #dee2e6;
-               border-radius: 6px;
-               margin-top: 5px;
-               max-height: 200px;
-               overflow-y: auto;
-               z-index: 10;
-               display: none;
-            }
-            
-            .map-address-result {
-               padding: 10px;
-               cursor: pointer;
-               border-bottom: 1px solid #f8f9fa;
-            }
-            
-            .map-address-result:hover {
-               background-color: #f8f9fa;
-            }
-            
-            .map-location {
-               display: flex;
-               gap: 15px;
-            }
-            
-            .map-input-group {
-               flex: 1;
-            }
-            
-            .map-zoom-wrap {
-               display: flex;
-               align-items: center;
-               gap: 15px;
-            }
-            
-            .map-zoom-slider {
-               flex: 1;
-               height: 6px;
-               -webkit-appearance: none;
-               background: #dee2e6;
-               border-radius: 3px;
-               outline: none;
-            }
-            
-            .map-zoom-slider::-webkit-slider-thumb {
-               -webkit-appearance: none;
-               width: 18px;
-               height: 18px;
-               background: #4dabf7;
-               border-radius: 50%;
-               cursor: pointer;
-            }
-            
-            .map-zoom-value {
-               font-weight: 500;
-               min-width: 30px;
-               text-align: center;
-            }
-            
-            .map-heights {
-               display: flex;
-               gap: 10px;
-            }
-            
-            .map-height {
-               flex: 1;
-               cursor: pointer;
-               padding: 10px;
-               border-radius: 6px;
-               background: #f8f9fa;
-               transition: all 0.2s;
-               text-align: center;
-               display: flex;
-               flex-direction: column;
-               align-items: center;
-            }
-            
-            .map-height:hover {
-               background: #e9ecef;
-            }
-            
-            .map-height.selected {
-               background: rgba(13, 110, 253, 0.1);
-               box-shadow: 0 0 0 2px #4dabf7;
-            }
-            
-            .map-height-bar {
-               width: 30px;
-               background: #adb5bd;
-               margin-bottom: 8px;
-               border-radius: 2px;
-            }
-            
-            .map-height-name {
-               font-size: 12px;
-               font-weight: 500;
-            }
-            
-            .map-apply-button {
-               background-color: #0d6efd;
-               color: white;
-               border: none;
-               border-radius: 4px;
-               padding: 10px 15px;
-               font-size: 14px;
-               font-weight: 500;
-               cursor: pointer;
-               width: 100%;
-               transition: background-color 0.2s;
-            }
-            
-            .map-apply-button:hover {
-               background-color: #0b5ed7;
-            }
-            
-            .map-settings-modal .gjs-mdl-dialog {
-               max-width: 700px !important;
-               border-radius: 8px !important;
-               overflow: hidden !important;
-            }
-            
-            .map-settings-modal .gjs-mdl-header {
-               background-color: #fff !important;
-               border-bottom: 1px solid #e9ecef !important;
-               padding: 16px 20px !important;
-            }
+        .map-settings {
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+          display: flex;
+          flex-direction: column;
+          color: #1a202c;
+          padding: 0;
+          max-width: 650px;
+          margin: 0 auto;
+        }
+        
+        .map-section {
+          margin-bottom: 24px;
+        }
+        
+        .map-label {
+          display: block;
+          font-weight: 600;
+          margin-bottom: 12px;
+          color: #2d3748;
+          font-size: 14px;
+          letter-spacing: 0.01em;
+        }
+        
+        .map-input-wrap {
+          position: relative;
+        }
+        
+        .map-input {
+          width: 100%;
+          padding: 12px 16px;
+          padding-right: 40px;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          font-size: 14px;
+          transition: all 0.2s ease;
+          box-sizing: border-box;
+          ;
+          background-color: #fff;
+        }
+        
+        .map-input:focus {
+          border-color: #4299e1;
+          outline: none;
+          box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+        }
+        
+        .map-input-icon {
+          position: absolute;
+          right: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #a0aec0;
+        }
+        
+        .map-zoom-container {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          padding: 0 4px;
+        }
+        
+        .map-zoom-slider {
+          flex-grow: 1;
+          height: 6px;
+          -webkit-appearance: none;
+          appearance: none;
+          background: #e2e8f0;
+          border-radius: 8px;
+          outline: none;
+          transition: all 0.2s ease;
+        }
+        
+        .map-zoom-slider::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          width: 20px;
+          height: 20px;
+          background: #4299e1;
+          border-radius: 50%;
+          cursor: pointer;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          transition: all 0.2s ease;
+        }
+        
+        .map-zoom-slider::-webkit-slider-thumb:hover {
+          background: #3182ce;
+          transform: scale(1.1);
+        }
+        
+        .map-zoom-slider::-moz-range-thumb {
+          width: 20px;
+          height: 20px;
+          background: #4299e1;
+          border-radius: 50%;
+          cursor: pointer;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          transition: all 0.2s ease;
+          border: none;
+        }
+        
+        .map-zoom-slider::-moz-range-thumb:hover {
+          background: #3182ce;
+          transform: scale(1.1);
+        }
+        
+        .map-zoom-slider:focus {
+          box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+        }
+        
+        .map-zoom-value {
+          width: 40px;
+          text-align: center;
+          font-weight: 600;
+          font-size: 16px;
+          color: #2d3748;
+          background: #f7fafc;
+          padding: 5px 0;
+          border-radius: 6px;
+          border: 1px solid #e2e8f0;
+        }
+        
+        .map-sizes {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 12px;
+        }
+        
+        .map-size {
+          cursor: pointer;
+          padding: 14px 10px;
+          border-radius: 10px;
+          background: #f7fafc;
+          transition: all 0.2s ease;
+          text-align: center;
+          border: 1px solid #e2e8f0;
+     }
+        
+        .map-size:hover {
+          background: #ebf8ff;
+          transform: translateY(-2px);
+          box-shadow: 0 0 0 1px rgba(66, 153, 225, 0.3);
+        }
+        
+        .map-size.selected {
+          background: #ebf8ff;
+          box-shadow: 0 0 0 1px rgba(66, 153, 225, 0.3);
+        }
+        
+        .map-size-bar {
+          height: 18px;
+          border-radius: 4px;
+          margin: 8px auto;
+          background: #fff;
+          border: 1px solid #e2e8f0;
+          transition: all 0.2s ease;
+        }
+        
+        .map-size:hover .map-size-bar,
+        .map-size.selected .map-size-bar {
+          border-color: #4299e1;
+        }
+        
+        .map-size-name {
+          font-size: 13px;
+          font-weight: 500;
+          color: #4a5568;
+          transition: color 0.2s ease;
+        }
+        
+        .map-size.selected .map-size-name {
+          color: #2b6cb0;
+        }
+        
+        .map-radius-options {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 12px;
+        }
+        
+      .map-radius {
+         cursor: pointer;
+         padding: 14px 10px;
+         border-radius: 10px;
+         background: #f7fafc;
+         transition: all 0.2s ease;
+         text-align: center;
+         border: 1px solid #e2e8f0;
+         display: flex;
+         flex-direction: column;
+         align-items: center;  /* Centre horizontalement */
+         justify-content: center; /* Centre verticalement */
+         gap: 8px;
+      }
 
-            .map-settings-modal .gjs-mdl-title {
-               font-weight: 600 !important;
-               font-size: 16px !important;
-            }
-            
-            .map-settings-modal .gjs-mdl-content {
-               padding: 20px !important;
-            }
-            
-            .map-settings-modal .gjs-mdl-btn-close {
-               font-size: 20px !important;
-            }
-         `;
-         modalContent.appendChild(style);
+        .map-radius:hover {
+          background: #ebf8ff;
+          transform: translateY(-2px);
+          box-shadow: 0 0 0 1px rgba(66, 153, 225, 0.3);
+        }
+        
+        .map-radius.selected {
+          background: #ebf8ff;
+          transform: translateY(-2px);
+          box-shadow: 0 0 0 1px rgba(66, 153, 225, 0.3);
+        }
+        
+        .map-radius-preview {
+         width: 30px;
+         height: 30px;
+         background: #fff;
+         margin: 0 auto; /* Garantit le centrage horizontal */
+         border: 1px solid #e2e8f0;
+         transition: all 0.2s ease;
+        }
+        
+        .map-radius:hover .map-radius-preview,
+        .map-radius.selected .map-radius-preview {
+          border-color: #4299e1;
+        }
+        
+        .map-radius-name {
+          font-size: 13px;
+          font-weight: 500;
+          color: #4a5568;
+          transition: color 0.2s ease;
+        }
+        
+        .map-radius.selected .map-radius-name {
+          color: #2b6cb0;
+        }
+        
+        .map-settings-modal .gjs-mdl-dialog {
+          max-width: 700px !important;
+          border-radius: 16px !important;
+          overflow: hidden !important;
+          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 
+                      0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+          border: 1px solid #e2e8f0 !important;
+        }
+        
+        .map-settings-modal .gjs-mdl-header {
+          background-color: #fff !important;
+          border-bottom: 1px solid #e2e8f0 !important;
+          padding: 20px 24px !important;
+        }
+        
+        .map-settings-modal .gjs-mdl-title {
+          font-weight: 700 !important;
+          font-size: 18px !important;
+          color: #1a202c !important;
+        }
+        
+        .map-settings-modal .gjs-mdl-content {
+          padding: 24px !important;
+          background-color: #fff !important;
+        }
+        
+        .map-settings-modal .gjs-mdl-btn-close {
+          font-size: 18px !important;
+          color: #4a5568 !important;
+          opacity: 0.8 !important;
+          transition: opacity 0.2s ease !important;
+        }
+        
+        .map-settings-modal .gjs-mdl-btn-close:hover {
+          opacity: 1 !important;
+        }
+        
+        .map-settings-modal .gjs-mdl-footer {
+          background-color: #f8fafc !important;
+          border-top: 1px solid #e2e8f0 !important;
+          padding: 16px 24px !important;
+        }
+        
+        .map-settings-modal .gjs-mdl-btn {
+          padding: 10px 18px !important;
+          border-radius: 8px !important;
+          font-weight: 600 !important;
+          font-size: 14px !important;
+          transition: all 0.2s ease !important;
+        }
+        
+        .map-settings-modal .gjs-mdl-btn-primary {
+          background-color: #4299e1 !important;
+          color: #fff !important;
+          border: none !important;
+        }
+        
+        .map-settings-modal .gjs-mdl-btn-primary:hover {
+          background-color: #3182ce !important;
+          transform: translateY(-1px) !important;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+        }
+      `;
+         content.appendChild(style);
 
-         // Ouvrir la modal
          editor.Modal.open({
             title: 'Paramètres de la carte',
-            content: modalContent,
+            content,
             attributes: {
                class: 'map-settings-modal'
             }
+         }).onceClose(() => {
+            // Appliquer les modifications au composant lorsque la modal se ferme
+            const addressInput = content.querySelector('.map-address-input') as HTMLInputElement;
+            const zoomSlider = content.querySelector('.map-zoom-slider') as HTMLInputElement;
+
+            if (addressInput && zoomSlider) {
+               const address = addressInput.value.trim() || options.defaultAddress;
+               const zoom = parseInt(zoomSlider.value) || options.defaultZoom;
+
+               component.set('address', address);
+               component.set('zoom', zoom);
+            }
          });
 
-         // Sélectionner les éléments du formulaire
-         const form = modalContent.querySelector('#map-settings-form') as HTMLFormElement;
-         const addressInput = modalContent.querySelector('.map-address-input') as HTMLInputElement;
-         const searchButton = modalContent.querySelector('.map-search-button') as HTMLButtonElement;
-         const statusDisplay = modalContent.querySelector('.map-address-status') as HTMLElement;
-         const latInput = modalContent.querySelector('.map-latitude-input') as HTMLInputElement;
-         const lngInput = modalContent.querySelector('.map-longitude-input') as HTMLInputElement;
-         const zoomSlider = modalContent.querySelector('.map-zoom-slider') as HTMLInputElement;
-         const zoomValueDisplay = modalContent.querySelector('.map-zoom-value') as HTMLElement;
-         const heightOptions = modalContent.querySelectorAll('.map-height');
-
-         // Variables pour stocker les valeurs sélectionnées
-         let selectedHeight = currentHeight;
-         let selectedLat = parseFloat(currentLatitude.toString());
-         let selectedLng = parseFloat(currentLongitude.toString());
-         let selectedZoom = parseInt(currentZoom.toString());
-         let selectedAddress = currentAddress;
-
-         // Gestion du zoom
+         // Event listener pour le zoom
+         const zoomSlider = content.querySelector('.map-zoom-slider') as HTMLInputElement;
+         const zoomValue = content.querySelector('.map-zoom-value') as HTMLElement;
          zoomSlider.addEventListener('input', function () {
-            selectedZoom = parseInt(this.value);
-            zoomValueDisplay.textContent = selectedZoom.toString();
+            zoomValue.textContent = this.value;
          });
 
-         // Gestion des coordonnées
-         latInput.addEventListener('change', function () {
-            selectedLat = parseFloat(this.value);
-         });
-
-         lngInput.addEventListener('change', function () {
-            selectedLng = parseFloat(this.value);
-         });
-
-         // Gestion de la recherche d'adresse
-         searchButton.addEventListener('click', async function () {
-            if (!addressInput.value.trim()) {
-               statusDisplay.textContent = 'Veuillez entrer une adresse à rechercher.';
-               statusDisplay.style.color = '#dc3545';
-               return;
-            }
-
-            statusDisplay.textContent = 'Recherche en cours...';
-            statusDisplay.style.color = '#6c757d';
-
-            const result = await geocodeAddress(addressInput.value);
-
-            if (result) {
-               statusDisplay.textContent = `Adresse trouvée: ${result.display_name}`;
-               statusDisplay.style.color = '#198754';
-
-               // Mettre à jour les coordonnées
-               selectedLat = parseFloat(result.lat);
-               selectedLng = parseFloat(result.lon);
-               selectedAddress = addressInput.value;
-
-               latInput.value = selectedLat.toString();
-               lngInput.value = selectedLng.toString();
-            } else {
-               statusDisplay.textContent = 'Adresse non trouvée. Veuillez essayer avec une adresse plus précise.';
-               statusDisplay.style.color = '#dc3545';
-            }
-         });
-
-         // Gestion des options de hauteur
-         heightOptions.forEach(option => {
+         // Event listeners pour les options de taille
+         const sizeOptions = content.querySelectorAll('.map-size');
+         sizeOptions.forEach(option => {
             option.addEventListener('click', function (this: HTMLElement) {
                // Mise à jour visuelle
-               heightOptions.forEach(el => el.classList.remove('selected'));
+               sizeOptions.forEach(el => {
+                  el.classList.remove('selected');
+               });
                this.classList.add('selected');
 
-               // Stocker la hauteur sélectionnée
-               selectedHeight = this.getAttribute('data-height') || 'medium';
+               // Appliquer la taille
+               const size = this.getAttribute('data-size');
+               if (!size || !MAP_SIZES[size]) return;
+
+               // Mettre à jour les styles
+               const currentCompStyles = { ...component.getStyle() };
+               component.setStyle({
+                  ...currentCompStyles,
+                  ...MAP_SIZES[size]
+               });
+
+               // Mettre à jour l'attribut
+               component.set('attributes', {
+                  ...component.getAttributes(),
+                  'data-size': size
+               });
             });
          });
 
-         // Gérer la soumission du formulaire
-         form.addEventListener('submit', (e) => {
-            e.preventDefault();
-
-            // 1. Mettre à jour l'iframe
-            const mapUrl = generateMapUrl(selectedLat, selectedLng, selectedZoom);
-            iframeComponent.set('attributes', {
-               ...iframeComponent.getAttributes(),
-               src: mapUrl
-            });
-
-            // 2. Mettre à jour les attributs du conteneur
-            component.set('attributes', {
-               ...component.getAttributes(),
-               'data-latitude': selectedLat,
-               'data-longitude': selectedLng,
-               'data-zoom': selectedZoom,
-               'data-height': selectedHeight,
-               'data-address': selectedAddress
-            });
-
-            // 3. Appliquer la hauteur
-            if (MAP_HEIGHTS[selectedHeight]) {
-               component.setStyle({
-                  ...component.getStyle(),
-                  ...MAP_HEIGHTS[selectedHeight]
+         // Event listeners pour les options de rayon de bordure
+         const radiusOptions = content.querySelectorAll('.map-radius');
+         radiusOptions.forEach(option => {
+            option.addEventListener('click', function (this: HTMLElement) {
+               // Mise à jour visuelle
+               radiusOptions.forEach(el => {
+                  el.classList.remove('selected');
                });
-            }
+               this.classList.add('selected');
 
-            // Fermer la modal
-            editor.Modal.close();
+               // Appliquer le rayon
+               const radius = this.getAttribute('data-radius');
+               if (!radius || !BORDER_RADIUS[radius]) return;
+
+               // Mettre à jour les styles
+               const currentCompStyles = { ...component.getStyle() };
+               component.setStyle({
+                  ...currentCompStyles,
+                  ...BORDER_RADIUS[radius]
+               });
+
+               // Mettre à jour l'attribut
+               component.set('attributes', {
+                  ...component.getAttributes(),
+                  'data-border-radius': radius
+               });
+            });
          });
       }
    });
@@ -569,142 +607,47 @@ function registerCommands(
 function createMapType(): AddComponentTypeOptions {
    return {
       isComponent: (el: HTMLElement) => {
-         if (el.tagName === 'DIV' && el.hasAttribute('data-gjs-type') &&
-            el.getAttribute('data-gjs-type') === COMPONENT_TYPE) {
+         if (el.getAttribute('data-gjs-type') === COMPONENT_TYPE) {
             return { type: COMPONENT_TYPE };
          }
          return undefined;
       },
       model: {
          defaults: {
-            tagName: 'div',
-            name: "Map Container",
+            tagName: 'iframe',
+            name: "Map",
             draggable: true,
             droppable: false,
+            address: "Paris, France",
+            zoom: 10,
             attributes: {
                'data-gjs-type': COMPONENT_TYPE,
                'data-size': 'medium',
-               'data-border-radius': 'none',
-               'data-latitude': 48.8566,
-               'data-longitude': 2.3522,
-               'data-zoom': 13,
-               'data-height': 'medium',
-               'data-address': ''
+               'data-border-radius': 'none'
             },
             style: {
-               position: 'relative',
-               display: 'block',
-               ...MAP_BASE_STYLES
+               ...MAP_BASE_STYLES,
+               ...BORDER_RADIUS['none']
             },
-            components: [
-               {
-                  tagName: 'iframe',
-                  attributes: {
-                     src: generateMapUrl(48.8566, 2.3522, 13),
-                     frameborder: "0",
-                     allowfullscreen: ''
-                  },
-                  style: {
-                     width: '100%',
-                     height: '100%',
-                     border: 'none',
-                     'border-radius': '4px',
-                     background: '#f8f9fa'
-                  }
-               },
-               {
-                  tagName: 'div',
-                  draggable: false,
-                  droppable: false,
-                  toolbar: [],
-                  attributes: {
-                     class: 'map-edit-button',
-                  },
-                  style: {
-                     "position": 'absolute',
-                     "top": '10px',
-                     "right": '10px',
-                     "z-index": '3',
-                     "background": '#0d6efd',
-                     "color": 'white',
-                     "border": 'none',
-                     "padding": '10px 18px',
-                     "font-size": '14px',
-                     "font-weight": '500',
-                     "cursor": 'pointer',
-                     "min-width": '120px',
-                     "display": 'flex',
-                     "align-items": 'center',
-                     "justify-content": 'center',
-                     "box-shadow": '0 4px 8px rgba(0,0,0,0.15)',
-                     "transition": 'all 0.2s ease',
-                     "backdrop-filter": 'blur(4px)',
-                     "background-color": 'rgba(13, 110, 253, 0.9)',
-                     "border-radius": '7px'
-                  },
-                  content: `
-    <div style="display: flex; align-items: center; justify-content: center; width: 100%;">
-      <svg viewBox="0 0 24 24" width="18" height="18" style="margin-right: 8px;">
-        <path fill="white" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-      </svg>
-      <span>Modifier</span>
-    </div>
-  `
-               }
-            ]
          },
          init() {
-            this.on('change:attributes:data-latitude change:attributes:data-longitude change:attributes:data-zoom', this.updateMap);
-            this.on('change:attributes:data-height', this.updateHeight);
+            this.on('change:address change:zoom', this.updateMap);
+            this.updateMap();
          },
          updateMap() {
-            const attrs = this.getAttributes();
-            const lat = parseFloat(attrs['data-latitude']) || 48.8566;
-            const lng = parseFloat(attrs['data-longitude']) || 2.3522;
-            const zoom = parseInt(attrs['data-zoom']) || 13;
-
-
-            const newSrc = generateMapUrl(lat, lng, zoom);
-
-            // Mise à jour de l'iframe
-            const iframe = this.components().at(0);
-            if (iframe) {
-               iframe.set('attributes', {
-                  ...iframe.getAttributes(),
-                  src: newSrc
-               });
-            }
-         },
-         updateHeight() {
-            const height = this.getAttributes()['data-height'] || 'medium';
-            if (MAP_HEIGHTS[height]) {
-               this.setStyle({
-                  ...this.getStyle(),
-                  ...MAP_HEIGHTS[height]
-               });
-            }
+            const address = this.get('address');
+            const zoom = this.get('zoom');
+            const iframe = `<iframe src="https://maps.google.com/maps?q=${encodeURIComponent(address)}&z=${zoom}&output=embed"></iframe>`;
+            this.components(iframe);
          }
       },
       view: {
          events() {
             return {
-               dblClick: 'onDblClick',
-               'click .map-edit-button': 'onEditClick',
+               dblclick: 'onDblClick'
             };
          },
-         onRender() {
-            // S'assurer que l'iframe et le bouton sont bien visibles
-            const iframe = this.el.querySelector('iframe');
-            const editButton = this.el.querySelector('.map-edit-button');
-
-            if (iframe && editButton) {
-               console.log('Map iframe and edit button rendered successfully');
-            }
-         },
          onDblClick(e: MouseEvent) {
-            this.onEditClick(e);
-         },
-         onEditClick(e: MouseEvent) {
             e.preventDefault();
             e.stopPropagation();
 

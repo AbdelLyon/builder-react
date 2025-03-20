@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "incremental": true,
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo", // This option cannot be specified without specifying 'incremental' or 'composite' options
     "target": "ES2020",
     "useDefineForClassFields": true,
     "lib": [

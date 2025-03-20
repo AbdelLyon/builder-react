@@ -558,9 +558,9 @@ class TinyMCECustomRTESingleton {
         }
         
         .ai-prompt-input:focus {
-          border-color: #4dabf7;
+          border-color: rgba(15, 120, 230, 0.6);;
           outline: none;
-          box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+          box-shadow: 0 0 0 1px rgba(15, 120, 230, 0.2);
         }
         
         .ai-prompt-actions {

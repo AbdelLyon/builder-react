@@ -181,8 +181,8 @@ function registerCommands(editor: Editor, options: Required<SpacerPluginOptions>
             }
             
             .modern-spacer-size.selected {
-               background: rgba(13, 110, 253, 0.1);
-               box-shadow: 0 0 0 2px #4dabf7;
+               background: rgba(15, 120, 230, 0.2);
+               box-shadow: 0 0 0 2px rgba(15, 120, 230, 0.6);;
             }
             
             .modern-spacer-size-inner {
